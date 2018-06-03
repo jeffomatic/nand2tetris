@@ -1,4 +1,4 @@
-// This file is part of www.nand2tetris.org
+ // This file is part of www.nand2tetris.org
 // and the book "The Elements of Computing Systems"
 // by Nisan and Schocken, MIT Press.
 // File name: projects/03/a/RAM8.hdl
@@ -15,5 +15,45 @@ CHIP RAM8 {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    
+    // Registers
+
+    Register(in = in, load = Reg000Load, out = Reg000Out);
+    Register(in = in, load = Reg001Load, out = Reg001Out);
+    Register(in = in, load = Reg010Load, out = Reg010Out);
+    Register(in = in, load = Reg011Load, out = Reg011Out);
+    Register(in = in, load = Reg100Load, out = Reg100Out);
+    Register(in = in, load = Reg101Load, out = Reg101Out);
+    Register(in = in, load = Reg110Load, out = Reg110Out);
+    Register(in = in, load = Reg111Load, out = Reg111Out);    
+
+    // Load bit demultiplexing
+
+    DMux8Way(
+      in = load,
+      sel = address,
+      a = Reg000Load,
+      b = Reg001Load,
+      c = Reg010Load,
+      d = Reg011Load,
+      e = Reg100Load,
+      f = Reg101Load,
+      g = Reg110Load,
+      h = Reg111Load
+    );
+
+    // Output multiplexing
+
+    Mux8Way16(
+      a = Reg000Out,
+      b = Reg001Out,
+      c = Reg010Out,
+      d = Reg011Out,
+      e = Reg100Out,
+      f = Reg101Out,
+      g = Reg110Out,
+      h = Reg111Out,      
+      sel = address,
+      out = out
+    );
 }
