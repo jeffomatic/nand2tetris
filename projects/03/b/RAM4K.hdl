@@ -15,5 +15,46 @@ CHIP RAM4K {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+
+    // Sub-RAMs
+
+    RAM512(in = in, load = SubRam000Load, address=address[0..8], out = SubRam000);
+    RAM512(in = in, load = SubRam001Load, address=address[0..8], out = SubRam001);
+    RAM512(in = in, load = SubRam010Load, address=address[0..8], out = SubRam010);
+    RAM512(in = in, load = SubRam011Load, address=address[0..8], out = SubRam011);
+    RAM512(in = in, load = SubRam100Load, address=address[0..8], out = SubRam100);
+    RAM512(in = in, load = SubRam101Load, address=address[0..8], out = SubRam101);
+    RAM512(in = in, load = SubRam110Load, address=address[0..8], out = SubRam110);
+    RAM512(in = in, load = SubRam111Load, address=address[0..8], out = SubRam111);
+
+    // Load bit demultiplexing
+
+    DMux8Way(
+      in = load,
+      sel = address[9..11],
+      a = SubRam000Load,
+      b = SubRam001Load,
+      c = SubRam010Load,
+      d = SubRam011Load,
+      e = SubRam100Load,
+      f = SubRam101Load,
+      g = SubRam110Load,
+      h = SubRam111Load
+    );
+    
+    // Output multiplexing
+
+    Mux8Way16(
+      a = SubRam000,
+      b = SubRam001,
+      c = SubRam010,
+      d = SubRam011,
+      e = SubRam100,
+      f = SubRam101,
+      g = SubRam110,
+      h = SubRam111,      
+      sel = address[9..11],
+      out = out
+    );
+
 }

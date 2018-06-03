@@ -15,5 +15,34 @@ CHIP RAM16K {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+
+    // Sub-RAMs
+
+    RAM4K(in = in, load = SubRam000Load, address=address[0..11], out = SubRam000);
+    RAM4K(in = in, load = SubRam001Load, address=address[0..11], out = SubRam001);
+    RAM4K(in = in, load = SubRam010Load, address=address[0..11], out = SubRam010);
+    RAM4K(in = in, load = SubRam011Load, address=address[0..11], out = SubRam011);
+
+    // Load bit demultiplexing
+
+    DMux4Way(
+      in = load,
+      sel = address[12..13],
+      a = SubRam000Load,
+      b = SubRam001Load,
+      c = SubRam010Load,
+      d = SubRam011Load
+    );
+    
+    // Output multiplexing
+
+    Mux4Way16(
+      a = SubRam000,
+      b = SubRam001,
+      c = SubRam010,
+      d = SubRam011,   
+      sel = address[12..13],
+      out = out
+    );
+
 }
