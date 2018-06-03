@@ -17,11 +17,13 @@ CHIP PC {
 
     PARTS:
     
-    Inc16(in = feedback, out = incremented);
+    Inc16(in = PrevVal, out = IncVal);
 
-    Mux16(a = feedback, b = incremented, sel = inc, out = mux1);
-    Mux16(a = mux1, b = in, sel = load, out = mux2);
-    Mux16(a = mux2, b = false, sel = reset, out = next);
+    Mux16(a = IncVal, b = in, sel = load, out = InMux0);
+    Mux16(a = InMux0, b = false, sel = reset, out = NextVal);
 
-    Register(in = next, load = true, out = out, out = feedback);
+    Or(a = load, b = inc, out = LoadOrInc);
+    Or(a = LoadOrInc, b = reset, out = UseNextVal);
+
+    Register(in = NextVal, load = UseNextVal, out = out, out = PrevVal);
 }
