@@ -15,5 +15,46 @@ CHIP RAM64 {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+
+    // Sub-RAMs
+
+    RAM8(in = in, load = Ram000Load, address=address[0..2], out = Ram000);
+    RAM8(in = in, load = Ram001Load, address=address[0..2], out = Ram001);
+    RAM8(in = in, load = Ram010Load, address=address[0..2], out = Ram010);
+    RAM8(in = in, load = Ram011Load, address=address[0..2], out = Ram011);
+    RAM8(in = in, load = Ram100Load, address=address[0..2], out = Ram100);
+    RAM8(in = in, load = Ram101Load, address=address[0..2], out = Ram101);
+    RAM8(in = in, load = Ram110Load, address=address[0..2], out = Ram110);
+    RAM8(in = in, load = Ram111Load, address=address[0..2], out = Ram111);
+
+    // Load bit demultiplexing
+
+    DMux8Way(
+      in = load,
+      sel = address[3..5],
+      a = Ram000Load,
+      b = Ram001Load,
+      c = Ram010Load,
+      d = Ram011Load,
+      e = Ram100Load,
+      f = Ram101Load,
+      g = Ram110Load,
+      h = Ram111Load
+    );
+    
+    // Output multiplexing
+
+    Mux8Way16(
+      a = Ram000,
+      b = Ram001,
+      c = Ram010,
+      d = Ram011,
+      e = Ram100,
+      f = Ram101,
+      g = Ram110,
+      h = Ram111,      
+      sel = address[3..5],
+      out = out
+    );
+
 }
