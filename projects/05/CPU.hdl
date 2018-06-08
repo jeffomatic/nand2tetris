@@ -39,5 +39,123 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+
+    /*
+
+    a:
+        0: AOrM is A
+        1: AOrM is M
+    c1 (ALU zx bit, always D)
+    c2 (ALU nx bit)
+    c3 (ALU zy bit, always AOrM)
+    c4 (ALU ny bit)
+    c5 (ALU f bit)
+    c6 (ALU no bit)
+
+    */
+
+    // Is this an a-instruction?
+    Not(
+        in = instruction[15],
+        out = IsAInstruction
+    );
+
+    // a-bit: use explicit A register value, or memory value
+    Mux16(
+        a = RegAValue,
+        b = inM,
+        sel = instruction[12],
+        out = AOrM
+    );
+
+    // If bit 3 of a c-instruction is set, memory should be updated.
+    And(
+        a = instruction[15],
+        b = instruction[3], // dest: M
+        out = writeM
+    );
+    
+    // A register
+    ARegister(
+        in = RegAIn,
+        load = RegALoad,
+        out = RegAValue,
+        out[0..14] = addressM
+    );
+
+    // Register A should be updated if:
+    // - this is an a-instruction.
+    // - bit 5 is set in a c-instruction.
+    Or(
+        a = IsAInstruction, // a-instruction
+        b = instruction[5], // dest: A
+        out = RegALoad
+    );
+
+    // Register A takes the value of:
+    // - an instruction literal, if this is an a-instruction.
+    // - the c-instruction result, if this is a c-instruction.
+    Mux16(
+        a[0..14] = instruction[0..14],
+        b = ALUResult,
+        sel = instruction[15],
+        out = RegAIn
+    );
+
+    // D register
+    DRegister(
+        in = ALUResult,
+        load = RegDLoad,
+        out = RegDValue
+    );
+
+    And(
+        a = instruction[15],
+        b = instruction[4], // dest: D
+        out = RegDLoad
+    );
+
+    // ALU
+    ALU(
+        x = RegDValue,
+        y = AOrM,
+        zx = instruction[11],
+        nx = instruction[10],
+        zy = instruction[9],
+        ny = instruction[8],
+        f = instruction[7],
+        no = instruction[6],
+        out = ALUResult,
+        out = outM,
+        zr = ALUZero,
+        ng = ALUNegative
+    );
+
+    // PC register
+    PC(
+        reset = reset,
+        load = ShouldJump,
+        inc = true,
+        in = RegAValue,
+        out[0..14] = pc
+    );
+
+    /*
+    ShouldJump = instruction[0] && (
+        (j2 && ALUZero) ||
+        (j1 && ALUNegative) ||
+        (j3 && !ALUNegative)
+    )
+    */
+
+    Not(in = ALUNegative, out = ALUNotNegative);
+    Not(in = ALUZero, out = ALUNotZero);
+    And(a = ALUNotNegative, b = ALUNotZero, out = ALUPositive);
+    And(a = instruction[2], b = ALUNegative, out = JumpNegative);
+    And(a = instruction[1], b = ALUZero, out = JumpZero);
+    And(a = instruction[0], b = ALUPositive, out = JumpPositive);
+    Or(a = JumpNegative, b = JumpZero, out = PreJump1);
+    Or(a = PreJump1, b = JumpPositive, out = PreJump2);
+    And(a = PreJump2, b = instruction[15], out = ShouldJump);
+
 }
