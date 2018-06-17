@@ -103,7 +103,6 @@ def pop_command(args : Array(String), line : Int, basename : String)
     offset += 5 # temp segment starts at RAM[5]
     raise "line #{line}: push command: invalid offset for temp segment" if offset < 5 || 12 < offset
     puts "@#{offset}"
-    puts "A=M"
   else
     raise "line #{line}: push command: invalid memory segment #{segment}"
   end
