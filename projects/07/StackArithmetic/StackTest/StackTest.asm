@@ -302,8 +302,7 @@ M=M+1
 A=M-1
 D=M
 A=A-1
-D=M+D
-M=D
+M=M+D
 @SP
 M=M-1
 @112
@@ -317,8 +316,7 @@ M=M+1
 A=M-1
 D=M
 A=A-1
-D=M-D
-M=D
+M=M-D
 @SP
 M=M-1
 @SP
@@ -328,8 +326,7 @@ M=-M
 A=M-1
 D=M
 A=A-1
-D=M&D
-M=D
+M=M&D
 @SP
 M=M-1
 @82
@@ -343,8 +340,7 @@ M=M+1
 A=M-1
 D=M
 A=A-1
-D=M|D
-M=D
+M=M|D
 @SP
 M=M-1
 @SP
