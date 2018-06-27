@@ -1,2 +1,4 @@
 *.out
 *.dat
+vm_translator
+vm_translator.dwarf
