@@ -5,4 +5,3 @@ all: $(ASM_FILES)
 
 %.asm: ./vm_translator.cr
 	crystal ./vm_translator.cr $(@:.asm=.vm) > $@
-	
