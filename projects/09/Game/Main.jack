@@ -1,0 +1,24 @@
+class Main {
+  function void main() {
+    var bool firstFrame;
+    var Entity entity;
+
+    let firstFrame = true;
+    let entity = Entity.new();
+
+    while (true) {
+      do entity.update();
+
+      if (firstFrame) {
+        let firstFrame = false;
+      } else {
+        do entity.erase();     
+      }
+
+      do entity.draw();
+      do Sys.wait(8);
+    }
+
+    return;
+  }
+}

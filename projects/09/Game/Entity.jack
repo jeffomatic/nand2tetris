@@ -1,0 +1,45 @@
+class Entity {
+  field int r;
+  field int x, y, vx, prevX, prevY;
+
+  constructor Entity new() {
+    let r = 5;
+
+    let x = r + 1;
+    let vx = 1;
+    let y = 128;
+
+    return this;
+  }
+
+  method void update() {
+    let prevX = x;
+    let prevY = y;
+
+    if (vx > 0) {
+      if (x = (512 - 1 - r)) {
+        let vx = -1;
+      }
+    } else {
+      if (x = r) {
+        let vx = 1;
+      }
+    }
+
+    let x = x + vx;
+
+    return;
+  }
+
+  method void erase() {
+    do Screen.setColor(false);
+    do Screen.drawCircle(prevX, prevY, r);
+    return;
+  }
+
+  method void draw() {
+    do Screen.setColor(true);
+    do Screen.drawCircle(x, y, r);
+    return;
+  }
+}
