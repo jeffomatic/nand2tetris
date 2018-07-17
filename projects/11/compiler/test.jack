@@ -1,0 +1,30 @@
+class Foobar {
+  field int x, y;
+  static int a, b;
+
+  method void DoTheThing(int x, Foo y) {
+    var int foo, bar, baz;
+    let x = 555;
+    let y = "Foo \"Bar\"";
+    let z = (x + (y + -z)) + foo(x/bar.z(), 5, ~(1 | 2));
+
+    while (false) {
+      let x = y;
+
+      if (x + 3) {
+        let x = 5;
+      }
+    }
+
+    if (true) {
+      let x = y;
+
+      while (n < 3) {
+        let n = n - 1;
+      }
+    } else {
+      let z = x;
+      do foo.bar(x, y);
+    }
+  }
+}

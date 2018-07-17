@@ -1,30 +1,14 @@
-require "html"
+require "./constants"
 require "./token"
 
 class Lexer
-  enum State
-    None
-    KeywordOrIdentifier
-    IntegerConstant
-    StringConstant
-    CommentLine
-    CommentMulti
+  def self.lex(io : IO) : Array(Token)
+    lexer = self.new(io)
+    lexer.run
+    lexer.tokens
   end
 
-  SYMBOLS = [
-    '{', '}', '(', ')', '[', ']',
-    '.', ',', ';',
-    '+', '-', '*', '/', '&', '|', '<', '>', '=', '~',
-  ]
-
-  KEYWORDS = [
-    "class", "constructor", "method", "function",
-    "int", "boolean", "char", "void",
-    "var", "static", "field",
-    "let", "do", "if", "else", "while", "return",
-    "true", "false", "null",
-    "this",
-  ]
+  getter tokens
 
   def initialize(@io : IO)
     @tokens = [] of Token
@@ -39,7 +23,7 @@ class Lexer
     @skip_next = false
   end
 
-  def lex
+  def run
     @line = 1
     @column = 1
 
@@ -132,7 +116,7 @@ class Lexer
 
     if symbol?(c)
       # Symbols are only a single character
-      @tokens << Token.new(Token::Type::Symbol, HTML.escape("" + c))
+      @tokens << Token.new(Token::Type::Symbol, c.to_s)
       return
     end
 
@@ -257,10 +241,6 @@ class Lexer
     @escape = false
   end
 
-  def to_xml
-    ["<tokens>", @tokens.join("\n"), "</tokens>"].join("\n")
-  end
-
   def invalid_char(c : Char?)
     error("invalid char: #{c}")
   end
@@ -269,7 +249,3 @@ class Lexer
     raise "Line #{@line}, column #{@column} #{@state}: #{s}"
   end
 end
-
-lexer = Lexer.new(STDIN)
-lexer.lex
-puts lexer.to_xml
