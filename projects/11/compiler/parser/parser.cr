@@ -17,7 +17,7 @@ end
 
 class Parser
   def self.parse(tokens : Array(Lexer::Token)) : Array(Node::Base)
-    self.new(tokens).run
+    new(tokens).run
   end
 
   getter nodes

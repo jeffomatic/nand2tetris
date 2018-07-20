@@ -119,6 +119,10 @@ class Parser::Node::Do < Parser::Node::Statement
   node_props method_call : Node::MethodCall
 end
 
+class Parser::Node::Return < Parser::Node::Statement
+  node_props expression : Node::Expression?
+end
+
 abstract class Parser::Node::Expression < Parser::Node::Base
 end
 
