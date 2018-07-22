@@ -160,13 +160,14 @@ module Codegen
 
   def self.codegen_string_constant(expr : Parser::Node::StringConstant)
     commands = [
-      "call String.new #{expr.value.size}", # allocate string object; string pointer will be at stack top
+      "push constant #{expr.value.size}",
+      "call String.new 1", # allocate string object; string pointer will be at stack top
     ]
 
     expr.value.each_char.each_with_index do |c, i|
       commands += [
         "push constant #{c.ord}", # arg 1
-        "call String.appendChar", # string pointer will be at stack top
+        "call String.appendChar 2", # string pointer will be at stack top
       ]
     end
 
