@@ -1,7 +1,7 @@
 .PHONY: test-parse helloworld math locals
 
 test-parse:
-	cat ./test.jack | crystal cmd/parse/main.cr
+	cat ./examples/test-parse/test.jack | crystal cmd/parse/main.cr
 
 helloworld:
 	crystal cmd/codegen/main.cr jack/helloworld
