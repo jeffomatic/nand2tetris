@@ -149,6 +149,8 @@ module Codegen
     commands = [] of String
 
     case expr
+    when Parser::Node::IntegerConstant
+      commands += codegen_integer_constant(expr)
     when Parser::Node::StringConstant
       commands += codegen_string_constant(expr)
     else
@@ -158,7 +160,11 @@ module Codegen
     commands
   end
 
-  def self.codegen_string_constant(expr : Parser::Node::StringConstant)
+  def self.codegen_integer_constant(expr : Parser::Node::IntegerConstant) : Array(String)
+    return ["push constant #{expr.value}"]
+  end
+
+  def self.codegen_string_constant(expr : Parser::Node::StringConstant) : Array(String)
     commands = [
       "push constant #{expr.value.size}",
       "call String.new 1", # allocate string object; string pointer will be at stack top
