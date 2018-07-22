@@ -1,0 +1,36 @@
+class Main {
+  function void main() {
+    var int n;
+    var bool first;
+    let first = true;
+
+    while (n < 20) {
+      if (first) {
+        let first = false;
+      } else {
+        do Output.println();
+      }
+
+      do Output.printInt(fibonacci(n));
+      let n = n + 1;
+    }
+
+    do Output.printString(".");
+
+    return;
+  }
+
+  function int fibonacci(int n) {
+    var int next, cur, tmp;
+    let next = 1;
+
+    while (n > 0) {
+      let tmp = next + cur;
+      let cur = next;
+      let next = tmp;
+      let n = n - 1;
+    }
+
+    return cur;
+  }
+}

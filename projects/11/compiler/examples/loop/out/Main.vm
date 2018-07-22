@@ -1,0 +1,59 @@
+function Main.main 2
+push constant 0
+not
+pop local 1
+label label0_start
+push local 0
+push constant 20
+lt
+not
+if-goto label0_end
+push local 1
+if-goto label0_if_true
+call Output.println 0
+goto label0_if_end
+label label0_if_true
+push constant 0
+pop local 1
+label label0_if_end
+push local 0
+call Main.fibonacci 1
+call Output.printInt 1
+push local 0
+push constant 1
+add
+pop local 0
+goto label0_start
+label label0_end
+push constant 1
+call String.new 1
+push constant 46
+call String.appendChar 2
+call Output.printString 1
+push constant 0
+return
+function Main.fibonacci 3
+push constant 1
+pop local 0
+label label1_start
+push argument 0
+push constant 0
+gt
+not
+if-goto label1_end
+push local 0
+push local 1
+add
+pop local 2
+push local 0
+pop local 1
+push local 2
+pop local 0
+push argument 0
+push constant 1
+sub
+pop argument 0
+goto label1_start
+label label1_end
+push local 1
+return

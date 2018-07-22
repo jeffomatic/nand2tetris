@@ -1,4 +1,4 @@
-.PHONY: test-parse helloworld math locals conditional
+.PHONY: test-parse helloworld math locals conditional loop
 
 test-parse:
 	cat ./examples/test-parse/test.jack | crystal cmd/parse/main.cr
@@ -14,3 +14,6 @@ locals:
 
 conditional:
 	crystal cmd/codegen/main.cr examples/conditional
+
+loop:
+	crystal cmd/codegen/main.cr examples/loop

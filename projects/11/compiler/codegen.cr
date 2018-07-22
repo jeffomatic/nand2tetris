@@ -68,6 +68,8 @@ module Codegen
       codegen_assignment(klass, st, statement)
     when ASTNode::Conditional
       codegen_conditional(klass, st, statement)
+    when ASTNode::Loop
+      codegen_loop(klass, st, statement)
     when ASTNode::Do
       codegen_do(klass, st, statement)
     when ASTNode::Return
@@ -117,6 +119,35 @@ module Codegen
     end
 
     commands << "label #{conditional_prefix}_if_end"
+    commands
+  end
+
+  @@next_loop_index = 0
+
+  def self.codegen_loop(
+    klass : ASTNode::Class,
+    st : SymbolTable,
+    statement : ASTNode::Loop
+  ) : Array(String)
+    label_prefix = "label#{@@next_loop_index}"
+    @@next_loop_index += 1
+
+    commands = ["label #{label_prefix}_start"]
+    commands += codegen_expression(klass, st, statement.condition)
+    commands += [
+      "not",
+      "if-goto #{label_prefix}_end",
+    ]
+
+    statement.body.each do |s|
+      commands += codegen_statement(klass, st, s)
+    end
+
+    commands += [
+      "goto #{label_prefix}_start",
+      "label #{label_prefix}_end",
+    ]
+
     commands
   end
 
