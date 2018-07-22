@@ -1,5 +1,5 @@
 require "../../lexer"
-require "../../parser/parser"
+require "../../parser"
 require "../../codegen/codegen"
 require "../../util"
 

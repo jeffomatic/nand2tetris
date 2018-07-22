@@ -1,6 +1,6 @@
-require "../constants"
-require "../token"
-require "../ast_node"
+require "./constants"
+require "./token"
+require "./ast_node"
 
 def assert_token!(t : Token?, want_type : Token::Type, want_values : Array(String)? = nil) : Void
   if t.nil?
