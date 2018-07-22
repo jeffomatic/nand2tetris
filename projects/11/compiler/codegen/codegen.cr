@@ -153,6 +153,8 @@ module Codegen
       commands += codegen_integer_constant(expr)
     when Parser::Node::StringConstant
       commands += codegen_string_constant(expr)
+    when Parser::Node::BinaryOperation
+      commands += codegen_binary_operation(globals, klass, expr)
     else
       raise NotImplementedError.new("expression not implemented: #{expr.class.name}")
     end
@@ -175,6 +177,40 @@ module Codegen
         "push constant #{c.ord}", # arg 1
         "call String.appendChar 2", # string pointer will be at stack top
       ]
+    end
+
+    commands
+  end
+
+  def self.codegen_binary_operation(
+    globals : Hash(String, SymbolTable),
+    klass : Parser::Node::Class,
+    expr : Parser::Node::BinaryOperation
+  ) : Array(String)
+    commands = codegen_expression(globals, klass, expr.left_operand)
+    commands += codegen_expression(globals, klass, expr.right_operand)
+
+    case expr.operator
+    when "+"
+      commands << "add"
+    when "-"
+      commands << "sub"
+    when "*"
+      commands << "call Math.multiply 2"
+    when "/"
+      commands << "call Math.divide 2"
+    when "&"
+      commands << "and"
+    when "|"
+      commands << "or"
+    when "<"
+      commands << "lt"
+    when ">"
+      commands << "gt"
+    when "="
+      commands << "eq"
+    else
+      raise "invalid binary operator: #{expr.operator}"
     end
 
     commands
