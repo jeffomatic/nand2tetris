@@ -47,19 +47,29 @@ module Codegen
     ]
 
     subroutine.body.each do |s|
-      case s
-      when ASTNode::Assignment
-        commands += codegen_assignment(klass, st, s)
-      when ASTNode::Do
-        commands += codegen_do(klass, st, s)
-      when ASTNode::Return
-        commands += codegen_return(klass, st, s)
-      else
-        raise NotImplementedError.new("statement codegen for #{s.class.name}")
-      end
+      commands += codegen_statement(klass, st, s)
     end
 
     commands
+  end
+
+  def self.codegen_statement(
+    klass : ASTNode::Class,
+    st : SymbolTable,
+    statement : ASTNode::Statement
+  ) : Array(String)
+    case statement
+    when ASTNode::Assignment
+      codegen_assignment(klass, st, statement)
+    when ASTNode::Conditional
+      codegen_conditional(klass, st, statement)
+    when ASTNode::Do
+      codegen_do(klass, st, statement)
+    when ASTNode::Return
+      codegen_return(klass, st, statement)
+    else
+      raise NotImplementedError.new("statement codegen for #{statement.class.name}")
+    end
   end
 
   def self.codegen_assignment(
