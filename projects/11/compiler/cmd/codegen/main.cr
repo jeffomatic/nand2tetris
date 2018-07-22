@@ -1,7 +1,6 @@
 require "../../lexer"
 require "../../parser"
 require "../../codegen"
-require "../../util"
 
 def codegen(srcpath : String, outdir : String) : Void
   outpath = File.join(outdir, File.basename(srcpath, ".jack") + ".vm")

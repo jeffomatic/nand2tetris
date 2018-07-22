@@ -1,6 +1,6 @@
 require "../../lexer"
 require "../../parser"
-require "../../util"
+require "../util"
 
 tokens = Lexer.lex(STDIN)
 nodes = Parser.parse(tokens)
