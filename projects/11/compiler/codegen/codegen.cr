@@ -1,11 +1,11 @@
 require "../constants"
-require "../parser/node"
+require "../ast_node"
 
 module Codegen
   class SymbolTable
     def_clone
 
-    def initialize(klass : Parser::Node::Class)
+    def initialize(klass : ASTNode::Class)
       @decls = {
         Compiler::VarScope::Local => ({} of String => Int32),
         Compiler::VarScope::Argument => ({} of String => Int32),
@@ -32,18 +32,18 @@ module Codegen
     end
   end
 
-  def self.codegen(nodes : Array(Parser::Node::Base)) : Array(String)
+  def self.codegen(nodes : Array(ASTNode::Base)) : Array(String)
     commands = [] of String
 
     nodes.each do |n|
-      raise "invalid top-level node: #{n}" unless n.is_a?(Parser::Node::Class)
+      raise "invalid top-level node: #{n}" unless n.is_a?(ASTNode::Class)
       commands += codegen_class(n)
     end
 
     commands
   end
 
-  def self.codegen_class(klass : Parser::Node::Class) : Array(String)
+  def self.codegen_class(klass : ASTNode::Class) : Array(String)
     commands = [] of String
     st = SymbolTable.new(klass)
     klass.subroutines.each do |s|
@@ -53,9 +53,9 @@ module Codegen
   end
 
   def self.codegen_subroutine(
-    klass : Parser::Node::Class,
+    klass : ASTNode::Class,
     st : SymbolTable,
-    subroutine : Parser::Node::Subroutine
+    subroutine : ASTNode::Subroutine
   ) : Array(String)
     subroutine.parameters.each do |param|
       st.declare(Compiler::VarScope::Argument, param.name)
@@ -77,11 +77,11 @@ module Codegen
 
     subroutine.body.each do |s|
       case s
-      when Parser::Node::Assignment
+      when ASTNode::Assignment
         commands += codegen_assignment(klass, st, s)
-      when Parser::Node::Do
+      when ASTNode::Do
         commands += codegen_do(klass, st, s)
-      when Parser::Node::Return
+      when ASTNode::Return
         commands += codegen_return(klass, st, s)
       else
         raise NotImplementedError.new("statement codegen for #{s.class.name}")
@@ -92,9 +92,9 @@ module Codegen
   end
 
   def self.codegen_assignment(
-    klass : Parser::Node::Class,
+    klass : ASTNode::Class,
     st : SymbolTable,
-    statement : Parser::Node::Assignment
+    statement : ASTNode::Assignment
   ) : Array(String)
     commands = codegen_expression(klass, st, statement.expression)
 
@@ -105,9 +105,9 @@ module Codegen
   end
 
   def self.codegen_do(
-    klass : Parser::Node::Class,
+    klass : ASTNode::Class,
     st : SymbolTable,
-    statement : Parser::Node::Do
+    statement : ASTNode::Do
   ) : Array(String)
     commands = [] of String
 
@@ -128,9 +128,9 @@ module Codegen
   end
 
   def self.codegen_return(
-    klass : Parser::Node::Class,
+    klass : ASTNode::Class,
     st : SymbolTable,
-    statement : Parser::Node::Return
+    statement : ASTNode::Return
   ) : Array(String)
     commands = [] of String
 
@@ -146,22 +146,22 @@ module Codegen
   end
 
   def self.codegen_expression(
-    klass : Parser::Node::Class,
+    klass : ASTNode::Class,
     st : SymbolTable,
-    expr : Parser::Node::Expression
+    expr : ASTNode::Expression
   ) : Array(String)
     commands = [] of String
 
     case expr
-    when Parser::Node::IntegerConstant
+    when ASTNode::IntegerConstant
       commands += codegen_integer_constant(expr)
-    when Parser::Node::StringConstant
+    when ASTNode::StringConstant
       commands += codegen_string_constant(expr)
-    when Parser::Node::Reference
+    when ASTNode::Reference
       commands += codegen_reference(klass, st, expr)
-    when Parser::Node::BinaryOperation
+    when ASTNode::BinaryOperation
       commands += codegen_binary_operation(klass, st, expr)
-    when Parser::Node::UnaryOperation
+    when ASTNode::UnaryOperation
       commands += codegen_unary_operation(klass, st, expr)
     else
       raise NotImplementedError.new("expression not implemented: #{expr.class.name}")
@@ -170,11 +170,11 @@ module Codegen
     commands
   end
 
-  def self.codegen_integer_constant(expr : Parser::Node::IntegerConstant) : Array(String)
+  def self.codegen_integer_constant(expr : ASTNode::IntegerConstant) : Array(String)
     return ["push constant #{expr.value}"]
   end
 
-  def self.codegen_string_constant(expr : Parser::Node::StringConstant) : Array(String)
+  def self.codegen_string_constant(expr : ASTNode::StringConstant) : Array(String)
     commands = [
       "push constant #{expr.value.size}",
       "call String.new 1", # allocate string object; string pointer will be at stack top
@@ -191,18 +191,18 @@ module Codegen
   end
 
   def self.codegen_reference(
-    klass : Parser::Node::Class,
+    klass : ASTNode::Class,
     st : SymbolTable,
-    expr : Parser::Node::Reference
+    expr : ASTNode::Reference
   ) : Array(String)
     var_scope, offset = st.resolve(expr.identifier)
     ["push #{Compiler.var_scope_to_segment(var_scope)} #{offset}"]
   end
 
   def self.codegen_binary_operation(
-    klass : Parser::Node::Class,
+    klass : ASTNode::Class,
     st : SymbolTable,
-    expr : Parser::Node::BinaryOperation
+    expr : ASTNode::BinaryOperation
   ) : Array(String)
     commands = codegen_expression(klass, st, expr.left_operand)
     commands += codegen_expression(klass, st, expr.right_operand)
@@ -224,9 +224,9 @@ module Codegen
   end
 
   def self.codegen_unary_operation(
-    klass : Parser::Node::Class,
+    klass : ASTNode::Class,
     st : SymbolTable,
-    expr : Parser::Node::UnaryOperation
+    expr : ASTNode::UnaryOperation
   ) : Array(String)
     commands = codegen_expression(klass, st, expr.operand)
 

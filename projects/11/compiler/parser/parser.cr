@@ -1,6 +1,6 @@
 require "../constants"
 require "../lexer/token"
-require "./node"
+require "../ast_node"
 
 def assert_token!(t : Lexer::Token?, want_type : Lexer::Token::Type, want_values : Array(String)? = nil) : Void
   if t.nil?
@@ -17,7 +17,7 @@ def assert_token!(t : Lexer::Token?, want_type : Lexer::Token::Type, want_values
 end
 
 class Parser
-  def self.parse(tokens : Array(Lexer::Token)) : Array(Node::Base)
+  def self.parse(tokens : Array(Lexer::Token)) : Array(ASTNode::Base)
     new(tokens).run
   end
 
@@ -31,11 +31,11 @@ class Parser
   BINARY_OP_SYMBOLS           = ["+", "-", "*", "/", "&", "|", "<", ">", "="]
   UNARY_OP_SYMBOLS            = ["~", "-"]
 
-  def initialize(@tokens : Array(Lexer::Token)) : Array(Node::Base)
-    @nodes = [] of Node::Base
+  def initialize(@tokens : Array(Lexer::Token)) : Array(ASTNode::Base)
+    @nodes = [] of ASTNode::Base
   end
 
-  def run : Array(Node::Base)
+  def run : Array(ASTNode::Base)
     until @tokens.empty?
       @nodes << parse_class
     end
@@ -43,13 +43,13 @@ class Parser
     @nodes
   end
 
-  def parse_class : Node::Class
+  def parse_class : ASTNode::Class
     consume_keyword("class")
     name = consume_any_identifier
     consume_symbol("{")
 
-    members = [] of Node::VarDecl
-    subroutines = [] of Node::Subroutine
+    members = [] of ASTNode::VarDecl
+    subroutines = [] of ASTNode::Subroutine
     loop do
       t = peek
       break unless t.type == Lexer::Token::Type::Keyword
@@ -65,10 +65,10 @@ class Parser
 
     consume_symbol("}")
 
-    Node::Class.new(name: name, members: members, subroutines: subroutines)
+    ASTNode::Class.new(name: name, members: members, subroutines: subroutines)
   end
 
-  def parse_var_decl : Node::VarDecl
+  def parse_var_decl : ASTNode::VarDecl
     scope_str = consume_keyword(VAR_KEYWORDS)
     var_scope = Compiler.var_scope_from_decl_string(scope_str)
 
@@ -83,24 +83,24 @@ class Parser
 
     consume_symbol(";")
 
-    Node::VarDecl.new(var_scope: var_scope, type: type, names: names)
+    ASTNode::VarDecl.new(var_scope: var_scope, type: type, names: names)
   end
 
-  def parse_subroutine : Node::Subroutine
+  def parse_subroutine : ASTNode::Subroutine
     variant_str = consume_keyword(SUBROUTINE_VARIANT_KEYWORDS)
-    variant = Node::Subroutine.variant_from_string(variant_str)
+    variant = ASTNode::Subroutine.variant_from_string(variant_str)
     return_type = consume_any_identifier
 
     name = consume_any_identifier
     consume_symbol("(")
 
-    parameters = [] of Node::Parameter
+    parameters = [] of ASTNode::Parameter
     loop do
       break if test_next(Lexer::Token::Type::Symbol, ")")
 
       consume_symbol(",") if parameters.size > 0
 
-      parameters << Node::Parameter.new(
+      parameters << ASTNode::Parameter.new(
         type: consume_any_identifier,
         name: consume_any_identifier
       )
@@ -110,7 +110,7 @@ class Parser
 
     locals, body = parse_statement_block
 
-    Node::Subroutine.new(
+    ASTNode::Subroutine.new(
       variant: variant,
       return_type: return_type,
       name: name,
@@ -120,15 +120,15 @@ class Parser
     )
   end
 
-  def parse_statement_block : Tuple(Array(Node::VarDecl), Array(Node::Statement))
+  def parse_statement_block : Tuple(Array(ASTNode::VarDecl), Array(ASTNode::Statement))
     consume_symbol("{")
 
-    locals = [] of Node::VarDecl
+    locals = [] of ASTNode::VarDecl
     while test_next(Lexer::Token::Type::Keyword, "var")
       locals << parse_var_decl
     end
 
-    statements = [] of Node::Statement
+    statements = [] of ASTNode::Statement
     loop do
       break if test_next(Lexer::Token::Type::Symbol, "}")
       statements << parse_statement
@@ -139,7 +139,7 @@ class Parser
     return {locals, statements}
   end
 
-  def parse_statement : Node::Statement
+  def parse_statement : ASTNode::Statement
     raise "unexpected statement token #{peek}" unless peek.type == Lexer::Token::Type::Keyword
 
     case peek.value
@@ -158,17 +158,17 @@ class Parser
     end
   end
 
-  def parse_assignment_statement : Node::Assignment
+  def parse_assignment_statement : ASTNode::Assignment
     consume_keyword("let")
     assignee = consume_any_identifier
     consume_symbol("=")
     expression = parse_expression_until([";"])
-    s = Node::Assignment.new(assignee: assignee, expression: expression)
+    s = ASTNode::Assignment.new(assignee: assignee, expression: expression)
     consume_symbol(";")
     s
   end
 
-  def parse_conditional_statement : Node::Conditional
+  def parse_conditional_statement : ASTNode::Conditional
     consume_keyword("if")
     consume_symbol("(")
     condition = parse_expression_until([")"])
@@ -177,21 +177,21 @@ class Parser
     locals, consequence = parse_statement_block
     raise "cannot declare locals in conditional" unless locals.empty?
 
-    alternative = [] of Node::Statement
+    alternative = [] of ASTNode::Statement
     if test_next(Lexer::Token::Type::Keyword, "else")
       consume
       locals, alternative = parse_statement_block
       raise "cannot declare locals in conditional" unless locals.empty?
     end
 
-    Node::Conditional.new(
+    ASTNode::Conditional.new(
       condition: condition,
       consequence: consequence,
       alternative: alternative
     )
   end
 
-  def parse_loop_statement : Node::Loop
+  def parse_loop_statement : ASTNode::Loop
     consume_keyword("while")
     consume_symbol("(")
     condition = parse_expression_until([")"])
@@ -200,38 +200,38 @@ class Parser
     locals, body = parse_statement_block
     raise "cannot declare locals in conditional" unless locals.empty?
 
-    Node::Loop.new(
+    ASTNode::Loop.new(
       condition: condition,
       body: body
     )
   end
 
-  def parse_do_statement : Node::Do
+  def parse_do_statement : ASTNode::Do
     consume
     expr = parse_expression_until([";"])
     consume_symbol(";")
-    raise "want MethodCall statement, got: #{expr}" unless expr.is_a? Node::MethodCall
-    Node::Do.new(method_call: expr)
+    raise "want MethodCall statement, got: #{expr}" unless expr.is_a? ASTNode::MethodCall
+    ASTNode::Do.new(method_call: expr)
   end
 
-  def parse_return_statement : Node::Return
+  def parse_return_statement : ASTNode::Return
     consume
     expr = nil
     if !test_next(Lexer::Token::Type::Symbol, ";")
       expr = parse_expression_until([";"])
     end
     consume_symbol(";")
-    Node::Return.new(expression: expr)
+    ASTNode::Return.new(expression: expr)
   end
 
-  def parse_expression_until(terminators : Array(String)) : Node::Expression
+  def parse_expression_until(terminators : Array(String)) : ASTNode::Expression
     expr = nil
     t = consume
 
     case t.type
     when Lexer::Token::Type::Symbol
       if UNARY_OP_SYMBOLS.includes?(t.value)
-        expr = Node::UnaryOperation.new(
+        expr = ASTNode::UnaryOperation.new(
           operator: t.value,
           operand: parse_expression_until(terminators)
         )
@@ -242,11 +242,11 @@ class Parser
         raise "empty expression ending with #{t}"
       end
     when Lexer::Token::Type::IntegerConstant
-      expr = Node::IntegerConstant.new(value: t.value)
+      expr = ASTNode::IntegerConstant.new(value: t.value)
     when Lexer::Token::Type::StringConstant
-      expr = Node::StringConstant.new(value: t.value)
+      expr = ASTNode::StringConstant.new(value: t.value)
     when Lexer::Token::Type::Identifier
-      expr = Node::Reference.new(identifier: t.value)
+      expr = ASTNode::Reference.new(identifier: t.value)
     end
 
     raise "invalid token: #{t}" if expr.nil?
@@ -263,7 +263,7 @@ class Parser
 
     if BINARY_OP_SYMBOLS.includes?(peek.value)
       operator = consume.value
-      return Node::BinaryOperation.new(
+      return ASTNode::BinaryOperation.new(
         operator: operator,
         left_operand: expr,
         right_operand: parse_expression_until(terminators)
@@ -272,7 +272,7 @@ class Parser
 
     # Check for method call
 
-    raise "invalid token #{peek}" unless expr.is_a?(Node::Reference)
+    raise "invalid token #{peek}" unless expr.is_a?(ASTNode::Reference)
 
     if peek.value == "."
       consume
@@ -285,7 +285,7 @@ class Parser
 
     consume_symbol("(")
 
-    args = [] of Node::Expression
+    args = [] of ASTNode::Expression
     if !test_next(Lexer::Token::Type::Symbol, ")")
       loop do
         args << parse_expression_until([",", ")"])
@@ -296,7 +296,7 @@ class Parser
 
     consume_symbol(")")
 
-    return Node::MethodCall.new(
+    return ASTNode::MethodCall.new(
       klass: klass,
       method: method,
       args: args
