@@ -128,6 +128,10 @@ module Codegen
       commands += codegen_integer_constant(expr)
     when ASTNode::StringConstant
       commands += codegen_string_constant(expr)
+    when ASTNode::BooleanConstant
+      commands += codegen_boolean_constant(expr)
+    when ASTNode::NullConstant
+      commands += codegen_null_constant
     when ASTNode::Reference
       commands += codegen_reference(klass, st, expr)
     when ASTNode::BinaryOperation
@@ -143,6 +147,14 @@ module Codegen
 
   def self.codegen_integer_constant(expr : ASTNode::IntegerConstant) : Array(String)
     return ["push constant #{expr.value}"]
+  end
+
+  def self.codegen_boolean_constant(expr : ASTNode::BooleanConstant) : Array(String)
+    expr.value ? ["push constant 0", "not"] : ["push constant 0"]
+  end
+
+  def self.codegen_null_constant : Array(String)
+    ["push constant 0"]
   end
 
   def self.codegen_string_constant(expr : ASTNode::StringConstant) : Array(String)

@@ -246,7 +246,16 @@ class Parser
     when Token::Type::StringConstant
       expr = ASTNode::StringConstant.new(value: t.value)
     when Token::Type::Identifier
-      expr = ASTNode::Reference.new(identifier: t.value)
+      case t.value
+      when "true"
+        expr = ASTNode::BooleanConstant.new(value: true)
+      when "false"
+        expr = ASTNode::BooleanConstant.new(value: false)
+      when "null"
+        expr = ASTNode::NullConstant.new
+      else
+        expr = ASTNode::Reference.new(identifier: t.value)
+      end
     end
 
     raise "invalid token: #{t}" if expr.nil?

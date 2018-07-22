@@ -118,6 +118,13 @@ class ASTNode::StringConstant < ASTNode::Expression
   node_props value : String
 end
 
+class ASTNode::BooleanConstant < ASTNode::Expression
+  node_props value : Bool
+end
+
+class ASTNode::NullConstant < ASTNode::Expression
+end
+
 class ASTNode::Reference < ASTNode::Expression
   node_props identifier : String
 end
