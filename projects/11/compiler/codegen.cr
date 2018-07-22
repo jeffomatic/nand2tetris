@@ -90,27 +90,42 @@ module Codegen
     commands
   end
 
+  @@next_conditional_index = 0
+
+  def self.codegen_conditional(
+    klass : ASTNode::Class,
+    st : SymbolTable,
+    statement : ASTNode::Conditional
+  ) : Array(String)
+    conditional_prefix = "label#{@@next_conditional_index}"
+    @@next_conditional_index += 1
+
+    commands = codegen_expression(klass, st, statement.condition)
+    commands << "if-goto #{conditional_prefix}_if_true"
+
+    statement.alternative.each do |s|
+      commands += codegen_statement(klass, st, s)
+    end
+
+    commands += [
+      "goto #{conditional_prefix}_if_end",
+      "label #{conditional_prefix}_if_true",
+    ]
+
+    statement.consequence.each do |s|
+      commands += codegen_statement(klass, st, s)
+    end
+
+    commands << "label #{conditional_prefix}_if_end"
+    commands
+  end
+
   def self.codegen_do(
     klass : ASTNode::Class,
     st : SymbolTable,
     statement : ASTNode::Do
   ) : Array(String)
-    commands = [] of String
-
-    statement.method_call.args.each do |e|
-      commands += codegen_expression(klass, st, e)
-    end
-
-    parts = [] of String
-    klass = statement.method_call.klass
-    if !klass.nil?
-      parts << klass
-    end
-    parts << statement.method_call.method
-    func = parts.join(".")
-
-    commands << "call #{func} #{statement.method_call.args.size}"
-    commands
+    commands = codegen_method_call(klass, st, statement.method_call)
   end
 
   def self.codegen_return(
@@ -153,6 +168,8 @@ module Codegen
       commands += codegen_binary_operation(klass, st, expr)
     when ASTNode::UnaryOperation
       commands += codegen_unary_operation(klass, st, expr)
+    when ASTNode::MethodCall
+      commands += codegen_method_call(klass, st, expr)
     else
       raise NotImplementedError.new("expression not implemented: #{expr.class.name}")
     end
@@ -232,6 +249,26 @@ module Codegen
     when "-" then commands << "neg"
     when "~" then commands << "not"
     else          raise "invalid binary operator: #{expr.operator}"
+    end
+
+    commands
+  end
+
+  def self.codegen_method_call(
+    klass : ASTNode::Class,
+    st : SymbolTable,
+    method_call : ASTNode::MethodCall
+  ) : Array(String)
+    commands = [] of String
+
+    method_call.args.each do |e|
+      commands += codegen_expression(klass, st, e)
+    end
+
+    if !method_call.klass.nil?
+      commands << "call #{method_call.klass}.#{method_call.method} #{method_call.args.size}"
+    else
+      commands << "call #{klass.name}.#{method_call.method} #{method_call.args.size}"
     end
 
     commands

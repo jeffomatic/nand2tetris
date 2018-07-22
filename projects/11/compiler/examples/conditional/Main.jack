@@ -1,0 +1,32 @@
+class Main {
+  static bool x;
+
+  function void main() {
+    do setX(true);
+    do print(getX());
+    do setX(false);
+    do print(getX());
+    return;
+  }
+
+  function bool getX() {
+    return x;
+  }
+
+  function void setX(bool v) {
+    let x = v;
+    return;
+  }
+
+  function void print(bool v) {
+    if (v) {
+      do Output.printString("v is true");
+      do Output.println();
+    } else {
+      do Output.printString("v is false");
+      do Output.println();
+    }
+
+    return;
+  }
+}
