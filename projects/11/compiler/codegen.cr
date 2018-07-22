@@ -36,12 +36,20 @@ module Codegen
     subroutine : ASTNode::Subroutine
   ) : Array(String)
     subroutine.parameters.each do |param|
-      st.declare(Compiler::VarScope::Argument, param.name)
+      st.declare(
+        var_scope: Compiler::VarScope::Argument,
+        type: param.type,
+        identifier: param.name
+      )
     end
 
     subroutine.locals.each do |var_decl|
       var_decl.names.each do |n|
-        st.declare(Compiler::VarScope::Local, n)
+        st.declare(
+          var_scope: Compiler::VarScope::Local,
+          type: var_decl.type,
+          identifier: n
+        )
       end
     end
 
@@ -87,10 +95,7 @@ module Codegen
     statement : ASTNode::Assignment
   ) : Array(String)
     commands = codegen_expression(klass, st, statement.expression)
-
-    var_scope, offset = st.resolve(statement.assignee)
-    commands << "pop #{Compiler.var_scope_to_segment(var_scope)} #{offset}"
-
+    commands << st.resolve(statement.assignee).pop_command
     commands
   end
 
@@ -243,8 +248,7 @@ module Codegen
     st : SymbolTable,
     expr : ASTNode::Reference
   ) : Array(String)
-    var_scope, offset = st.resolve(expr.identifier)
-    ["push #{Compiler.var_scope_to_segment(var_scope)} #{offset}"]
+    [st.resolve(expr.identifier).push_command]
   end
 
   def self.codegen_binary_operation(

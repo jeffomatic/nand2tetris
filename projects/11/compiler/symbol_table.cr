@@ -1,33 +1,73 @@
+require "./ast_node"
+
 class SymbolTable
-  def_clone
+  class Entry
+    def_clone
+    getter var_scope, type, identifier, offset
 
-  def initialize(klass : ASTNode::Class)
-    @decls = {
-      Compiler::VarScope::Local    => ({} of String => Int32),
-      Compiler::VarScope::Argument => ({} of String => Int32),
-      Compiler::VarScope::Field    => ({} of String => Int32),
-      Compiler::VarScope::Static   => ({} of String => Int32),
-    }
+    def initialize(
+      *,
+      @var_scope : Compiler::VarScope,
+      @type : String,
+      @identifier : String,
+      @offset : Int32
+    )
+    end
 
-    klass.members.each do |member|
-      member.names.each { |n| declare(member.var_scope, n) }
+    def pop_command
+      "pop #{Compiler.var_scope_to_segment(@var_scope)} #{@offset}"
+    end
+
+    def push_command
+      "push #{Compiler.var_scope_to_segment(@var_scope)} #{@offset}"
     end
   end
 
-  def declare(var_scope : Compiler::VarScope, identifier : String)
-    table = @decls[var_scope]
-    table[identifier] = table.size
+  def_clone
+
+  def initialize(klass : ASTNode::Class)
+    @entries_by_var_scope = {
+      Compiler::VarScope::Local    => ({} of String => Entry),
+      Compiler::VarScope::Argument => ({} of String => Entry),
+      Compiler::VarScope::Field    => ({} of String => Entry),
+      Compiler::VarScope::Static   => ({} of String => Entry),
+    }
+
+    klass.members.each do |member|
+      member.names.each do |n|
+        declare(
+          var_scope: member.var_scope,
+          type: member.type,
+          identifier: n
+        )
+      end
+    end
   end
 
-  def resolve(identifier : String) : Tuple(Compiler::VarScope, Int32)
-    @decls.each do |var_scope, offsets|
-      return {var_scope, offsets[identifier]} if offsets.has_key?(identifier)
+  def declare(
+    *,
+    var_scope : Compiler::VarScope,
+    type : String,
+    identifier : String
+  )
+    table = @entries_by_var_scope[var_scope]
+    table[identifier] = Entry.new(
+      var_scope: var_scope,
+      type: type,
+      identifier: identifier,
+      offset: table.size
+    )
+  end
+
+  def resolve(identifier : String) : Entry
+    @entries_by_var_scope.each do |var_scope, entries|
+      return entries[identifier] if entries.has_key?(identifier)
     end
 
     raise "undeclared variable: #{identifier}"
   end
 
   def clear(var_scope : Compiler::VarScope) : Void
-    @decls[var_scope] = {} of String => Int32
+    @entries_by_var_scope[var_scope] = {} of String => Entry
   end
 end
