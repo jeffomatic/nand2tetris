@@ -4,6 +4,7 @@ require "./token"
 class Lexer
   enum State
     None
+    Symbol
     KeywordOrIdentifier
     IntegerConstant
     StringConstant
@@ -47,6 +48,8 @@ class Lexer
     @column = 0
     @redo_current = false
     @skip_next = false
+
+    @token_start = CodeLoc.new(0, 0)
   end
 
   def run
@@ -78,6 +81,7 @@ class Lexer
       else
         case @state
         when State::None                then none_handler(c)
+        when State::Symbol              then symbol_handler(c)
         when State::KeywordOrIdentifier then keyword_or_identifier_handler(c)
         when State::IntegerConstant     then integer_constant_handler(c)
         when State::StringConstant      then string_constant_handler(c)
@@ -95,10 +99,6 @@ class Lexer
 
   def peek : Slice(Char)
     @io.peek.not_nil!.map { |b| b.chr }
-  end
-
-  def redo_current : Void
-    @redo_current = true
   end
 
   def skip_next : Void
@@ -134,15 +134,14 @@ class Lexer
         change_state(State::CommentMulti)
         skip_next
       else
-        @tokens << Token.new(Token::Type::Symbol, "/")
+        change_state(State::Symbol, redo_current: true)
       end
 
       return
     end
 
     if symbol?(c)
-      # Symbols are only a single character
-      @tokens << Token.new(Token::Type::Symbol, c.to_s)
+      change_state(State::Symbol, redo_current: true)
       return
     end
 
@@ -160,6 +159,13 @@ class Lexer
     invalid_char(c)
   end
 
+  def symbol_handler(c : Char?)
+    raise "expected symbol but got nil at #{@token_start}" if c.nil?
+    raise "invalid symbol #{c} at #{@token_start}" unless symbol?(c)
+    finish_token(Token::Type::Symbol, c.to_s)
+    change_state(State::None)
+  end
+
   def keyword_or_identifier_handler(c : Char?)
     if c.nil? || c.whitespace?
       finish_keyword_or_identifier
@@ -169,8 +175,7 @@ class Lexer
 
     if symbol?(c)
       finish_keyword_or_identifier
-      change_state(State::None)
-      redo_current
+      change_state(State::None, redo_current: true)
       return
     end
 
@@ -182,11 +187,16 @@ class Lexer
     invalid_char(c)
   end
 
+  def finish_token(type : Token::Type, value : String)
+    @tokens << Token.new(type, value, @token_start)
+    @token_start = CodeLoc.new(@line, @column)
+  end
+
   def finish_keyword_or_identifier
     if KEYWORDS.includes?(@value)
-      @tokens << Token.new(Token::Type::Keyword, @value)
+      finish_token(Token::Type::Keyword, @value)
     else
-      @tokens << Token.new(Token::Type::Identifier, @value)
+      finish_token(Token::Type::Identifier, @value)
     end
   end
 
@@ -199,8 +209,7 @@ class Lexer
 
     if symbol?(c)
       finish_integer_constant
-      change_state(State::None)
-      redo_current
+      change_state(State::None, redo_current: true)
       return
     end
 
@@ -218,7 +227,7 @@ class Lexer
   end
 
   def finish_integer_constant
-    @tokens << Token.new(Token::Type::IntegerConstant, @value)
+    finish_token(Token::Type::IntegerConstant, @value)
   end
 
   def string_constant_handler(c : Char?)
@@ -238,7 +247,7 @@ class Lexer
     end
 
     if c == '"'
-      @tokens << Token.new(Token::Type::StringConstant, @value)
+      finish_token(Token::Type::StringConstant, @value)
       change_state(State::None)
       return
     end
@@ -261,10 +270,13 @@ class Lexer
     end
   end
 
-  def change_state(s : State)
+  def change_state(s : State, *, redo_current : Bool = false)
     @state = s
     @value = ""
     @escape = false
+
+    @token_start = CodeLoc.new(@line, @column)
+    @redo_current = redo_current
   end
 
   def invalid_char(c : Char?)
