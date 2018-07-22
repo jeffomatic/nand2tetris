@@ -155,6 +155,8 @@ module Codegen
       commands += codegen_string_constant(expr)
     when Parser::Node::BinaryOperation
       commands += codegen_binary_operation(globals, klass, expr)
+    when Parser::Node::UnaryOperation
+      commands += codegen_unary_operation(globals, klass, expr)
     else
       raise NotImplementedError.new("expression not implemented: #{expr.class.name}")
     end
@@ -191,26 +193,32 @@ module Codegen
     commands += codegen_expression(globals, klass, expr.right_operand)
 
     case expr.operator
-    when "+"
-      commands << "add"
-    when "-"
-      commands << "sub"
-    when "*"
-      commands << "call Math.multiply 2"
-    when "/"
-      commands << "call Math.divide 2"
-    when "&"
-      commands << "and"
-    when "|"
-      commands << "or"
-    when "<"
-      commands << "lt"
-    when ">"
-      commands << "gt"
-    when "="
-      commands << "eq"
-    else
-      raise "invalid binary operator: #{expr.operator}"
+    when "+" then commands << "add"
+    when "-" then commands << "sub"
+    when "*" then commands << "call Math.multiply 2"
+    when "/" then commands << "call Math.divide 2"
+    when "&" then commands << "and"
+    when "|" then commands << "or"
+    when "<" then commands << "lt"
+    when ">" then commands << "gt"
+    when "=" then commands << "eq"
+    else raise "invalid binary operator: #{expr.operator}"
+    end
+
+    commands
+  end
+
+  def self.codegen_unary_operation(
+    globals : Hash(String, SymbolTable),
+    klass : Parser::Node::Class,
+    expr : Parser::Node::UnaryOperation
+  ) : Array(String)
+    commands = codegen_expression(globals, klass, expr.operand)
+
+    case expr.operator
+    when "-" then commands << "neg"
+    when "~" then commands << "not"
+    else raise "invalid binary operator: #{expr.operator}"
     end
 
     commands
