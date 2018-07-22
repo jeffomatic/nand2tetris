@@ -38,7 +38,6 @@ module ASTNode
   end
 end
 
-
 class ASTNode::Class < ASTNode::Base
   node_props(
     name : String,
