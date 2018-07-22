@@ -17,14 +17,16 @@ module Codegen
   def self.codegen_class(klass : ASTNode::Class) : Array(String)
     commands = [] of String
     st = SymbolTable.new(klass)
+
     klass.subroutines.each do |s|
       subroutine_symbols = st.clone
       if s.variant == ASTNode::Subroutine::Variant::ClassMethod
-        st.clear(Compiler::VarScope::Field)
+        subroutine_symbols.clear(Compiler::VarScope::Field)
       end
 
       commands += codegen_subroutine(klass, subroutine_symbols, s)
     end
+
     commands
   end
 
