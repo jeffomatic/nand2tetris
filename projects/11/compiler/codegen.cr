@@ -1,5 +1,5 @@
-require "../constants"
-require "../ast_node"
+require "./constants"
+require "./ast_node"
 
 module Codegen
   class SymbolTable
@@ -7,10 +7,10 @@ module Codegen
 
     def initialize(klass : ASTNode::Class)
       @decls = {
-        Compiler::VarScope::Local => ({} of String => Int32),
+        Compiler::VarScope::Local    => ({} of String => Int32),
         Compiler::VarScope::Argument => ({} of String => Int32),
-        Compiler::VarScope::Field => ({} of String => Int32),
-        Compiler::VarScope::Static => ({} of String => Int32),
+        Compiler::VarScope::Field    => ({} of String => Int32),
+        Compiler::VarScope::Static   => ({} of String => Int32),
       }
 
       klass.members.each do |member|
@@ -72,7 +72,7 @@ module Codegen
     end
 
     commands = [
-      "function #{klass.name}.#{subroutine.name} #{num_locals}"
+      "function #{klass.name}.#{subroutine.name} #{num_locals}",
     ]
 
     subroutine.body.each do |s|
@@ -182,7 +182,7 @@ module Codegen
 
     expr.value.each_char.each_with_index do |c, i|
       commands += [
-        "push constant #{c.ord}", # arg 1
+        "push constant #{c.ord}",   # arg 1
         "call String.appendChar 2", # string pointer will be at stack top
       ]
     end
@@ -217,7 +217,7 @@ module Codegen
     when "<" then commands << "lt"
     when ">" then commands << "gt"
     when "=" then commands << "eq"
-    else raise "invalid binary operator: #{expr.operator}"
+    else          raise "invalid binary operator: #{expr.operator}"
     end
 
     commands
@@ -233,7 +233,7 @@ module Codegen
     case expr.operator
     when "-" then commands << "neg"
     when "~" then commands << "not"
-    else raise "invalid binary operator: #{expr.operator}"
+    else          raise "invalid binary operator: #{expr.operator}"
     end
 
     commands

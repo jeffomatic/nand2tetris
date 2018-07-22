@@ -1,6 +1,6 @@
 require "../../lexer"
 require "../../parser"
-require "../../codegen/codegen"
+require "../../codegen"
 require "../../util"
 
 def codegen(srcpath : String, outdir : String) : Void
