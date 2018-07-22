@@ -149,6 +149,8 @@ class Parser
       parse_loop_statement
     when "do"
       parse_do_statement
+    when "return"
+      parse_return_statement
     else
       raise "unexpected statement token #{peek}"
     end
@@ -208,6 +210,16 @@ class Parser
     consume_symbol(";")
     raise "want MethodCall statement, got: #{expr}" unless expr.is_a? Node::MethodCall
     Node::Do.new(method_call: expr)
+  end
+
+  def parse_return_statement : Node::Return
+    consume
+    expr = nil
+    if !test_next(Lexer::Token::Type::Symbol, ";")
+      expr = parse_expression_until([";"])
+    end
+    consume_symbol(";")
+    Node::Return.new(expression: expr)
   end
 
   def parse_expression_until(terminators : Array(String)) : Node::Expression
