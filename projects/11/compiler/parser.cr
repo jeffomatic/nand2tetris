@@ -255,21 +255,50 @@ class Parser
         expr = ASTNode::NullConstant.new
       else
         expr = ASTNode::Reference.new(identifier: t.value)
+
+        # Check for method call
+        t = peek
+        if t.type == Token::Type::Symbol && [".", "("].includes?(t.value)
+          if t.value == "."
+            consume
+            klass = expr.identifier
+            method = consume_any_identifier
+          else
+            klass = nil
+            method = expr.identifier
+          end
+
+          consume_symbol("(")
+
+          args = [] of ASTNode::Expression
+          if !test_next(Token::Type::Symbol, ")")
+            loop do
+              args << parse_expression_until([",", ")"])
+              break if test_next(Token::Type::Symbol, ")")
+              consume_symbol(",")
+            end
+          end
+
+          consume_symbol(")")
+
+          expr = ASTNode::MethodCall.new(
+            klass: klass,
+            method: method,
+            args: args
+          )
+        end
       end
     end
 
     raise "invalid token: #{t}" if expr.nil?
 
-    # Now perform lookahead for terminators, binary operators, and method calls
-
+    # Now perform lookahead for terminators, and binary operators
     raise "invalid token: #{peek}" unless peek.type == Token::Type::Symbol
 
     # Check for terminator
-
     return expr if terminators.includes?(peek.value)
 
     # Check for binary operator
-
     if BINARY_OP_SYMBOLS.includes?(peek.value)
       operator = consume.value
       return ASTNode::BinaryOperation.new(
@@ -279,37 +308,7 @@ class Parser
       )
     end
 
-    # Check for method call
-
-    raise "invalid token #{peek}" unless expr.is_a?(ASTNode::Reference)
-
-    if peek.value == "."
-      consume
-      klass = expr.identifier
-      method = consume_any_identifier
-    else
-      klass = nil
-      method = expr.identifier
-    end
-
-    consume_symbol("(")
-
-    args = [] of ASTNode::Expression
-    if !test_next(Token::Type::Symbol, ")")
-      loop do
-        args << parse_expression_until([",", ")"])
-        break if test_next(Token::Type::Symbol, ")")
-        consume_symbol(",")
-      end
-    end
-
-    consume_symbol(")")
-
-    return ASTNode::MethodCall.new(
-      klass: klass,
-      method: method,
-      args: args
-    )
+    raise "invalid token #{peek}"
   end
 
   def consume : Token
