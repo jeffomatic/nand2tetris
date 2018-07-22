@@ -1,8 +1,4 @@
-.PHONY: lex parse test-parse test-codegen
-
-lex: $(LEX_FILES)
-
-parse: $(PARSE_FILES)
+.PHONY: test-parse helloworld math locals
 
 test-parse:
 	cat ./test.jack | crystal cmd/parse/main.cr
