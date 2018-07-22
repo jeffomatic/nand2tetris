@@ -1,4 +1,4 @@
-require "../../lexer/lexer"
+require "../../lexer"
 require "../../parser/parser"
 require "../../codegen/codegen"
 require "../../util"
