@@ -26,4 +26,8 @@ class SymbolTable
 
     raise "undeclared variable: #{identifier}"
   end
+
+  def clear(var_scope : Compiler::VarScope) : Void
+    @decls[var_scope] = {} of String => Int32
+  end
 end

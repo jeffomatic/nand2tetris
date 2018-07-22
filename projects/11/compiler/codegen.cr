@@ -18,7 +18,12 @@ module Codegen
     commands = [] of String
     st = SymbolTable.new(klass)
     klass.subroutines.each do |s|
-      commands += codegen_subroutine(klass, st.clone, s)
+      subroutine_symbols = st.clone
+      if s.variant == ASTNode::Subroutine::Variant::ClassMethod
+        st.clear(Compiler::VarScope::Field)
+      end
+
+      commands += codegen_subroutine(klass, subroutine_symbols, s)
     end
     commands
   end
