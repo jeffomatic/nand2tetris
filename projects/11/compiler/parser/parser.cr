@@ -1,3 +1,4 @@
+require "../constants"
 require "../lexer/token"
 require "./node"
 
@@ -69,7 +70,8 @@ class Parser
 
   def parse_var_decl : Node::VarDecl
     scope_str = consume_keyword(VAR_KEYWORDS)
-    scope = Node::VarDecl.scope_from_string(scope_str)
+    var_scope = Compiler.var_scope_from_decl_string(scope_str)
+
     type = consume_any_identifier
 
     names = [] of String
@@ -81,7 +83,7 @@ class Parser
 
     consume_symbol(";")
 
-    Node::VarDecl.new(scope: scope, type: type, names: names)
+    Node::VarDecl.new(var_scope: var_scope, type: type, names: names)
   end
 
   def parse_subroutine : Node::Subroutine

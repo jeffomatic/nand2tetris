@@ -1,0 +1,12 @@
+class Main {
+  function void main() {
+    var int x, y;
+
+    let x = 5;
+    let y = 7;
+
+    do Output.printInt(x + y);
+
+    return;
+  }
+}

@@ -12,3 +12,6 @@ helloworld:
 
 math:
 	crystal cmd/codegen/main.cr jack/math
+
+locals:
+	crystal cmd/codegen/main.cr jack/locals

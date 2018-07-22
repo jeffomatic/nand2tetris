@@ -1,97 +1,88 @@
+require "../constants"
 require "../parser/node"
 
 module Codegen
   class SymbolTable
-    getter vars, subroutines
+    def_clone
 
-    def initialize
-      @vars = {} of String => Parser::Node::VarDecl
-      @subroutines = {} of String => Parser::Node::Subroutine
-    end
-
-    def to_h
-      {
-        vars:        vars,
-        subroutines: subroutines,
+    def initialize(klass : Parser::Node::Class)
+      @decls = {
+        Compiler::VarScope::Local => ({} of String => Int32),
+        Compiler::VarScope::Argument => ({} of String => Int32),
+        Compiler::VarScope::Field => ({} of String => Int32),
+        Compiler::VarScope::Static => ({} of String => Int32),
       }
+
+      klass.members.each do |member|
+        member.names.each { |n| declare(member.var_scope, n) }
+      end
     end
 
-    def to_json(b : JSON::Builder)
-      raise NotImplementedError.new("#to_json")
+    def declare(var_scope : Compiler::VarScope, identifier : String)
+      table = @decls[var_scope]
+      table[identifier] = table.size
+    end
+
+    def resolve(identifier : String) : Tuple(Compiler::VarScope, Int32)
+      @decls.each do |var_scope, offsets|
+        return {var_scope, offsets[identifier]} if offsets.has_key?(identifier)
+      end
+
+      raise "undeclared variable: #{identifier}"
     end
   end
 
-  def self.collect_globals(nodes : Array(Parser::Node::Base)) : Hash(String, SymbolTable)
-    globals = {} of String => SymbolTable
-
-    nodes.each do |class_node|
-      raise "invalid top-level node: #{class_node}" unless class_node.is_a?(Parser::Node::Class)
-
-      st = SymbolTable.new
-
-      class_node.members.each do |node|
-        if node.scope == Parser::Node::VarDecl::Scope::Local
-          raise "cannot use 'var' for class member: #{node}"
-        end
-
-        node.names.each do |varname|
-          if st.vars.has_key?(varname)
-            raise "redeclaration of variable #{varname}; declaration already exists: #{st.vars[varname]}"
-          end
-
-          st.vars[varname] = node
-        end
-      end
-
-      class_node.subroutines.each do |node|
-        if st.subroutines.has_key?(node.name)
-          raise "redeclaration of subroutine #{node.name}; declaration already exists: #{st.subroutines[node.name]}"
-        end
-
-        st.subroutines[node.name] = node
-      end
-
-      globals[class_node.name] = st
-    end
-
-    globals
-  end
-
-  def self.codegen(
-    globals : Hash(String, SymbolTable),
-    nodes : Array(Parser::Node::Base)
-  ) : Array(String)
+  def self.codegen(nodes : Array(Parser::Node::Base)) : Array(String)
     commands = [] of String
 
     nodes.each do |n|
       raise "invalid top-level node: #{n}" unless n.is_a?(Parser::Node::Class)
-      commands += codegen_class(globals, n)
+      commands += codegen_class(n)
     end
 
     commands
   end
 
-  def self.codegen_class(globals : Hash(String, SymbolTable), klass : Parser::Node::Class) : Array(String)
+  def self.codegen_class(klass : Parser::Node::Class) : Array(String)
     commands = [] of String
-    klass.subroutines.each { |s| commands += codegen_subroutine(globals, klass, s) }
+    st = SymbolTable.new(klass)
+    klass.subroutines.each do |s|
+      commands += codegen_subroutine(klass, st.clone, s)
+    end
     commands
   end
 
   def self.codegen_subroutine(
-    globals : Hash(String, SymbolTable),
     klass : Parser::Node::Class,
+    st : SymbolTable,
     subroutine : Parser::Node::Subroutine
   ) : Array(String)
+    subroutine.parameters.each do |param|
+      st.declare(Compiler::VarScope::Argument, param.name)
+    end
+
+    subroutine.locals.each do |var_decl|
+      var_decl.names.each do |n|
+        st.declare(Compiler::VarScope::Local, n)
+      end
+    end
+
+    num_locals = subroutine.locals.reduce(0) do |memo, decl|
+      memo += decl.names.size
+    end
+
     commands = [
-      "function #{klass.name}.#{subroutine.name} #{subroutine.locals.size}"
+      "function #{klass.name}.#{subroutine.name} #{num_locals}"
     ]
 
     subroutine.body.each do |s|
       case s
+      when Parser::Node::Assignment
+        commands += codegen_assignment(klass, st, s)
       when Parser::Node::Do
-        commands += codegen_do(globals, klass, s)
+        commands += codegen_do(klass, st, s)
       when Parser::Node::Return
-        commands += codegen_return(globals, klass, s)
+        commands += codegen_return(klass, st, s)
       else
         raise NotImplementedError.new("statement codegen for #{s.class.name}")
       end
@@ -100,15 +91,28 @@ module Codegen
     commands
   end
 
-  def self.codegen_do(
-    globals : Hash(String, SymbolTable),
+  def self.codegen_assignment(
     klass : Parser::Node::Class,
+    st : SymbolTable,
+    statement : Parser::Node::Assignment
+  ) : Array(String)
+    commands = codegen_expression(klass, st, statement.expression)
+
+    var_scope, offset = st.resolve(statement.assignee)
+    commands << "pop #{Compiler.var_scope_to_segment(var_scope)} #{offset}"
+
+    commands
+  end
+
+  def self.codegen_do(
+    klass : Parser::Node::Class,
+    st : SymbolTable,
     statement : Parser::Node::Do
   ) : Array(String)
     commands = [] of String
 
     statement.method_call.args.each do |e|
-      commands += codegen_expression(globals, klass, e)
+      commands += codegen_expression(klass, st, e)
     end
 
     parts = [] of String
@@ -124,15 +128,15 @@ module Codegen
   end
 
   def self.codegen_return(
-    globals : Hash(String, SymbolTable),
     klass : Parser::Node::Class,
+    st : SymbolTable,
     statement : Parser::Node::Return
   ) : Array(String)
     commands = [] of String
 
     expr = statement.expression
     if !expr.nil?
-      commands += codegen_expression(globals, klass, expr)
+      commands += codegen_expression(klass, st, expr)
     else
       commands << "push constant 0"
     end
@@ -142,8 +146,8 @@ module Codegen
   end
 
   def self.codegen_expression(
-    globals : Hash(String, SymbolTable),
     klass : Parser::Node::Class,
+    st : SymbolTable,
     expr : Parser::Node::Expression
   ) : Array(String)
     commands = [] of String
@@ -153,10 +157,12 @@ module Codegen
       commands += codegen_integer_constant(expr)
     when Parser::Node::StringConstant
       commands += codegen_string_constant(expr)
+    when Parser::Node::Reference
+      commands += codegen_reference(klass, st, expr)
     when Parser::Node::BinaryOperation
-      commands += codegen_binary_operation(globals, klass, expr)
+      commands += codegen_binary_operation(klass, st, expr)
     when Parser::Node::UnaryOperation
-      commands += codegen_unary_operation(globals, klass, expr)
+      commands += codegen_unary_operation(klass, st, expr)
     else
       raise NotImplementedError.new("expression not implemented: #{expr.class.name}")
     end
@@ -184,13 +190,22 @@ module Codegen
     commands
   end
 
-  def self.codegen_binary_operation(
-    globals : Hash(String, SymbolTable),
+  def self.codegen_reference(
     klass : Parser::Node::Class,
+    st : SymbolTable,
+    expr : Parser::Node::Reference
+  ) : Array(String)
+    var_scope, offset = st.resolve(expr.identifier)
+    ["push #{Compiler.var_scope_to_segment(var_scope)} #{offset}"]
+  end
+
+  def self.codegen_binary_operation(
+    klass : Parser::Node::Class,
+    st : SymbolTable,
     expr : Parser::Node::BinaryOperation
   ) : Array(String)
-    commands = codegen_expression(globals, klass, expr.left_operand)
-    commands += codegen_expression(globals, klass, expr.right_operand)
+    commands = codegen_expression(klass, st, expr.left_operand)
+    commands += codegen_expression(klass, st, expr.right_operand)
 
     case expr.operator
     when "+" then commands << "add"
@@ -209,11 +224,11 @@ module Codegen
   end
 
   def self.codegen_unary_operation(
-    globals : Hash(String, SymbolTable),
     klass : Parser::Node::Class,
+    st : SymbolTable,
     expr : Parser::Node::UnaryOperation
   ) : Array(String)
-    commands = codegen_expression(globals, klass, expr.operand)
+    commands = codegen_expression(klass, st, expr.operand)
 
     case expr.operator
     when "-" then commands << "neg"

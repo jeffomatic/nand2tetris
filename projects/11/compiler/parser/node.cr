@@ -1,4 +1,5 @@
 require "json"
+require "../constants"
 
 class Parser
   module Node
@@ -48,22 +49,7 @@ class Parser::Node::Class < Parser::Node::Base
 end
 
 class Parser::Node::VarDecl < Parser::Node::Base
-  enum Scope
-    Static
-    Field
-    Local
-  end
-
-  def self.scope_from_string(s : String) : Scope
-    case s
-    when "static" then return Scope::Static
-    when "field"  then return Scope::Field
-    when "var"    then return Scope::Local
-    else               raise "invalid scope string: #{s}"
-    end
-  end
-
-  node_props scope : Scope, type : String, names : Array(String)
+  node_props var_scope : Compiler::VarScope, type : String, names : Array(String)
 end
 
 class Parser::Node::Subroutine < Parser::Node::Base
