@@ -9,3 +9,6 @@ test-parse:
 
 helloworld:
 	crystal cmd/codegen/main.cr jack/helloworld
+
+math:
+	crystal cmd/codegen/main.cr jack/math

@@ -1,0 +1,67 @@
+function Main.main 0
+push constant 1
+push constant 1
+add
+call Output.printInt 1
+call Output.println 0
+push constant 2
+push constant 2
+call Math.multiply 2
+call Output.printInt 1
+call Output.println 0
+push constant 8
+push constant 1
+sub
+call Output.printInt 1
+call Output.println 0
+push constant 10
+push constant 2
+call Math.divide 2
+call Output.printInt 1
+call Output.println 0
+push constant 1
+push constant 1
+lt
+call Output.printInt 1
+call Output.println 0
+push constant 1
+push constant 1
+gt
+call Output.printInt 1
+call Output.println 0
+push constant 1
+push constant 1
+eq
+call Output.printInt 1
+call Output.println 0
+push constant 1
+push constant 2
+lt
+call Output.printInt 1
+call Output.println 0
+push constant 1
+push constant 2
+gt
+call Output.printInt 1
+call Output.println 0
+push constant 1
+push constant 2
+eq
+call Output.printInt 1
+call Output.println 0
+push constant 3
+push constant 2
+lt
+call Output.printInt 1
+call Output.println 0
+push constant 3
+push constant 2
+gt
+call Output.printInt 1
+call Output.println 0
+push constant 3
+push constant 2
+eq
+call Output.printInt 1
+push constant 0
+return

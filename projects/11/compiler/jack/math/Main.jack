@@ -1,0 +1,30 @@
+class Main {
+  function void main() {
+    do Output.printInt(1 + 1);
+    do Output.println();
+    do Output.printInt(2 * 2);
+    do Output.println();
+    do Output.printInt(8 - 1);
+    do Output.println();
+    do Output.printInt(10 / 2);
+    do Output.println();
+    do Output.printInt(1 < 1);
+    do Output.println();
+    do Output.printInt(1 > 1);
+    do Output.println();
+    do Output.printInt(1 = 1);
+    do Output.println();
+    do Output.printInt(1 < 2);
+    do Output.println();
+    do Output.printInt(1 > 2);
+    do Output.println();
+    do Output.printInt(1 = 2);
+    do Output.println();
+    do Output.printInt(3 < 2);
+    do Output.println();
+    do Output.printInt(3 > 2);
+    do Output.println();
+    do Output.printInt(3 = 2);
+    return;
+  }
+}
