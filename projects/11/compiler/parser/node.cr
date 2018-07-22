@@ -152,7 +152,7 @@ end
 
 class Parser::Node::MethodCall < Parser::Node::Expression
   node_props(
-    scope : String?,
+    klass : String?,
     method : String,
     args : Array(Node::Expression)
   )

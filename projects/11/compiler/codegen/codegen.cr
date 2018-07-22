@@ -112,9 +112,9 @@ module Codegen
     end
 
     parts = [] of String
-    scope = statement.method_call.scope
-    if !scope.nil?
-      parts << scope
+    klass = statement.method_call.klass
+    if !klass.nil?
+      parts << klass
     end
     parts << statement.method_call.method
     func = parts.join(".")

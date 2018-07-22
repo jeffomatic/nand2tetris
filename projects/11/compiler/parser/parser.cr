@@ -274,10 +274,10 @@ class Parser
 
     if peek.value == "."
       consume
-      scope = expr.identifier
+      klass = expr.identifier
       method = consume_any_identifier
     else
-      scope = nil
+      klass = nil
       method = expr.identifier
     end
 
@@ -295,7 +295,7 @@ class Parser
     consume_symbol(")")
 
     return Node::MethodCall.new(
-      scope: scope,
+      klass: klass,
       method: method,
       args: args
     )
