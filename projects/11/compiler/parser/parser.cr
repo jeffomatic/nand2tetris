@@ -1,8 +1,8 @@
 require "../constants"
-require "../lexer/token"
+require "../token"
 require "../ast_node"
 
-def assert_token!(t : Lexer::Token?, want_type : Lexer::Token::Type, want_values : Array(String)? = nil) : Void
+def assert_token!(t : Token?, want_type : Token::Type, want_values : Array(String)? = nil) : Void
   if t.nil?
     raise "nil token, want type #{want_type}, want value in #{want_values.inspect}"
   end
@@ -17,7 +17,7 @@ def assert_token!(t : Lexer::Token?, want_type : Lexer::Token::Type, want_values
 end
 
 class Parser
-  def self.parse(tokens : Array(Lexer::Token)) : Array(ASTNode::Base)
+  def self.parse(tokens : Array(Token)) : Array(ASTNode::Base)
     new(tokens).run
   end
 
@@ -31,7 +31,7 @@ class Parser
   BINARY_OP_SYMBOLS           = ["+", "-", "*", "/", "&", "|", "<", ">", "="]
   UNARY_OP_SYMBOLS            = ["~", "-"]
 
-  def initialize(@tokens : Array(Lexer::Token)) : Array(ASTNode::Base)
+  def initialize(@tokens : Array(Token)) : Array(ASTNode::Base)
     @nodes = [] of ASTNode::Base
   end
 
@@ -52,7 +52,7 @@ class Parser
     subroutines = [] of ASTNode::Subroutine
     loop do
       t = peek
-      break unless t.type == Lexer::Token::Type::Keyword
+      break unless t.type == Token::Type::Keyword
 
       if CLASS_VAR_KEYWORDS.includes?(t.value)
         members << parse_var_decl
@@ -77,7 +77,7 @@ class Parser
     names = [] of String
     loop do
       names << consume_any_identifier
-      break if test_next(Lexer::Token::Type::Symbol, ";")
+      break if test_next(Token::Type::Symbol, ";")
       consume_symbol(",")
     end
 
@@ -96,7 +96,7 @@ class Parser
 
     parameters = [] of ASTNode::Parameter
     loop do
-      break if test_next(Lexer::Token::Type::Symbol, ")")
+      break if test_next(Token::Type::Symbol, ")")
 
       consume_symbol(",") if parameters.size > 0
 
@@ -124,13 +124,13 @@ class Parser
     consume_symbol("{")
 
     locals = [] of ASTNode::VarDecl
-    while test_next(Lexer::Token::Type::Keyword, "var")
+    while test_next(Token::Type::Keyword, "var")
       locals << parse_var_decl
     end
 
     statements = [] of ASTNode::Statement
     loop do
-      break if test_next(Lexer::Token::Type::Symbol, "}")
+      break if test_next(Token::Type::Symbol, "}")
       statements << parse_statement
     end
 
@@ -140,7 +140,7 @@ class Parser
   end
 
   def parse_statement : ASTNode::Statement
-    raise "unexpected statement token #{peek}" unless peek.type == Lexer::Token::Type::Keyword
+    raise "unexpected statement token #{peek}" unless peek.type == Token::Type::Keyword
 
     case peek.value
     when "let"
@@ -178,7 +178,7 @@ class Parser
     raise "cannot declare locals in conditional" unless locals.empty?
 
     alternative = [] of ASTNode::Statement
-    if test_next(Lexer::Token::Type::Keyword, "else")
+    if test_next(Token::Type::Keyword, "else")
       consume
       locals, alternative = parse_statement_block
       raise "cannot declare locals in conditional" unless locals.empty?
@@ -217,7 +217,7 @@ class Parser
   def parse_return_statement : ASTNode::Return
     consume
     expr = nil
-    if !test_next(Lexer::Token::Type::Symbol, ";")
+    if !test_next(Token::Type::Symbol, ";")
       expr = parse_expression_until([";"])
     end
     consume_symbol(";")
@@ -229,7 +229,7 @@ class Parser
     t = consume
 
     case t.type
-    when Lexer::Token::Type::Symbol
+    when Token::Type::Symbol
       if UNARY_OP_SYMBOLS.includes?(t.value)
         expr = ASTNode::UnaryOperation.new(
           operator: t.value,
@@ -241,11 +241,11 @@ class Parser
       elsif terminators.includes?(t.value)
         raise "empty expression ending with #{t}"
       end
-    when Lexer::Token::Type::IntegerConstant
+    when Token::Type::IntegerConstant
       expr = ASTNode::IntegerConstant.new(value: t.value)
-    when Lexer::Token::Type::StringConstant
+    when Token::Type::StringConstant
       expr = ASTNode::StringConstant.new(value: t.value)
-    when Lexer::Token::Type::Identifier
+    when Token::Type::Identifier
       expr = ASTNode::Reference.new(identifier: t.value)
     end
 
@@ -253,7 +253,7 @@ class Parser
 
     # Now perform lookahead for terminators, binary operators, and method calls
 
-    raise "invalid token: #{peek}" unless peek.type == Lexer::Token::Type::Symbol
+    raise "invalid token: #{peek}" unless peek.type == Token::Type::Symbol
 
     # Check for terminator
 
@@ -286,10 +286,10 @@ class Parser
     consume_symbol("(")
 
     args = [] of ASTNode::Expression
-    if !test_next(Lexer::Token::Type::Symbol, ")")
+    if !test_next(Token::Type::Symbol, ")")
       loop do
         args << parse_expression_until([",", ")"])
-        break if test_next(Lexer::Token::Type::Symbol, ")")
+        break if test_next(Token::Type::Symbol, ")")
         consume_symbol(",")
       end
     end
@@ -303,38 +303,38 @@ class Parser
     )
   end
 
-  def consume : Lexer::Token
+  def consume : Token
     @tokens.shift
   end
 
-  def peek : Lexer::Token
+  def peek : Token
     @tokens.first
   end
 
   def consume_keyword(value : String) : Void
     t = consume
-    assert_token!(t, Lexer::Token::Type::Keyword, [value])
+    assert_token!(t, Token::Type::Keyword, [value])
   end
 
   def consume_keyword(values : Array(String)) : String
     t = consume
-    assert_token!(t, Lexer::Token::Type::Keyword, values)
+    assert_token!(t, Token::Type::Keyword, values)
     t.value
   end
 
   def consume_any_identifier : String
     t = consume
-    assert_token!(t, Lexer::Token::Type::Identifier)
+    assert_token!(t, Token::Type::Identifier)
     t.value
   end
 
   def consume_symbol(value : String) : String
     t = consume
-    assert_token!(t, Lexer::Token::Type::Symbol, [value])
+    assert_token!(t, Token::Type::Symbol, [value])
     t.value
   end
 
-  def test_next(type : Lexer::Token::Type, value : String) : Bool
+  def test_next(type : Token::Type, value : String) : Bool
     t = peek
 
     return false if t.nil?

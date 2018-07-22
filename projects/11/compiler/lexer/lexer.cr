@@ -1,5 +1,5 @@
 require "./constants"
-require "./token"
+require "../token"
 
 class Lexer
   def self.lex(io : IO) : Array(Token)
