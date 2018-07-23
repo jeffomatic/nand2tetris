@@ -1,0 +1,46 @@
+class Main {
+  function void main() {
+    var int size, i;
+    var Array a;
+    let size = 10;
+    let a = Array.new(size);
+
+    while (i < size) {
+      let a[i] = i;
+      let i = i + 1;
+    }
+
+    let i = 0;
+    while (i < size) {
+      do Output.printInt(a[i]);
+      do Output.printString(" ");
+      let i = i + 1;
+    }
+
+    do Output.println();
+
+    do reverse(a, size);
+
+    let i = 0;
+    while (i < size) {
+      do Output.printInt(a[i]);
+      do Output.printString(" ");
+      let i = i + 1;
+    }
+
+    return;
+  }
+
+  function void reverse(Array a, int size) {
+    var int i, t;
+
+    while (i < (size / 2)) {
+      let t = a[i];
+      let a[i] = a[(size - i) - 1];
+      let a[(size - i) - 1] = t;
+      let i = i + 1;
+    }
+
+    return;
+  }
+}

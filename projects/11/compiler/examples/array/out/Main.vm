@@ -1,0 +1,127 @@
+function Main.main 3
+push constant 10
+pop local 0
+push local 0
+call Array.new 1
+pop local 2
+label label0_start
+push local 1
+push local 0
+lt
+not
+if-goto label0_end
+push local 1
+push local 2
+push local 1
+add
+pop pointer 1
+pop that 0
+push local 1
+push constant 1
+add
+pop local 1
+goto label0_start
+label label0_end
+push constant 0
+pop local 1
+label label1_start
+push local 1
+push local 0
+lt
+not
+if-goto label1_end
+push local 2
+push local 1
+add
+pop pointer 1
+push that 0
+call Output.printInt 1
+push constant 1
+call String.new 1
+push constant 32
+call String.appendChar 2
+call Output.printString 1
+push local 1
+push constant 1
+add
+pop local 1
+goto label1_start
+label label1_end
+call Output.println 0
+push local 2
+push local 0
+call Main.reverse 2
+push constant 0
+pop local 1
+label label2_start
+push local 1
+push local 0
+lt
+not
+if-goto label2_end
+push local 2
+push local 1
+add
+pop pointer 1
+push that 0
+call Output.printInt 1
+push constant 1
+call String.new 1
+push constant 32
+call String.appendChar 2
+call Output.printString 1
+push local 1
+push constant 1
+add
+pop local 1
+goto label2_start
+label label2_end
+push constant 0
+return
+function Main.reverse 2
+label label3_start
+push local 0
+push argument 1
+push constant 2
+call Math.divide 2
+lt
+not
+if-goto label3_end
+push argument 0
+push local 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push argument 0
+push argument 1
+push local 0
+sub
+push constant 1
+sub
+add
+pop pointer 1
+push that 0
+push argument 0
+push local 0
+add
+pop pointer 1
+pop that 0
+push local 1
+push argument 0
+push argument 1
+push local 0
+sub
+push constant 1
+sub
+add
+pop pointer 1
+pop that 0
+push local 0
+push constant 1
+add
+pop local 0
+goto label3_start
+label label3_end
+push constant 0
+return

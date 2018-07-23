@@ -102,7 +102,11 @@ abstract class ASTNode::Statement < ASTNode::Base
 end
 
 class ASTNode::Assignment < ASTNode::Statement
-  node_props assignee : String, expression : ASTNode::Expression
+  node_props(
+    assignee : String,
+    offset_expression : ASTNode::Expression?,
+    value_expression : ASTNode::Expression
+  )
 end
 
 class ASTNode::Conditional < ASTNode::Statement
@@ -157,6 +161,13 @@ end
 
 class ASTNode::UnaryOperation < ASTNode::Expression
   node_props operator : String, operand : ASTNode::Expression
+end
+
+class ASTNode::ArrayAccess < ASTNode::Expression
+  node_props(
+    varname : String,
+    offset_expression : ASTNode::Expression
+  )
 end
 
 class ASTNode::MethodCall < ASTNode::Expression

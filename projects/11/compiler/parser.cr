@@ -161,11 +161,29 @@ class Parser
   def parse_assignment_statement : ASTNode::Assignment
     consume_keyword("let")
     assignee = consume_any_identifier
+
+    t = peek
+    raise "expected symbol, got #{t}" unless t.type == Token::Type::Symbol
+
+    offset_expression = nil
+    if t.value == "["
+      consume
+      offset_expression = parse_expression_until(["]"])
+      consume_symbol("]")
+    end
+
     consume_symbol("=")
-    expression = parse_expression_until([";"])
-    s = ASTNode::Assignment.new(assignee: assignee, expression: expression)
+
+    value_expression = parse_expression_until([";"])
+    node = ASTNode::Assignment.new(
+      assignee: assignee,
+      offset_expression: offset_expression,
+      value_expression: value_expression
+    )
+
     consume_symbol(";")
-    s
+
+    node
   end
 
   def parse_conditional_statement : ASTNode::Conditional
@@ -246,48 +264,7 @@ class Parser
     when Token::Type::StringConstant
       expr = ASTNode::StringConstant.new(value: t.value)
     when Token::Type::Identifier
-      case t.value
-      when "true"
-        expr = ASTNode::BooleanConstant.new(value: true)
-      when "false"
-        expr = ASTNode::BooleanConstant.new(value: false)
-      when "null"
-        expr = ASTNode::NullConstant.new
-      else
-        expr = ASTNode::Reference.new(identifier: t.value)
-
-        # Check for method call
-        t = peek
-        if t.type == Token::Type::Symbol && [".", "("].includes?(t.value)
-          if t.value == "."
-            consume
-            scope_identifier = expr.identifier
-            method_identifier = consume_any_identifier
-          else
-            scope_identifier = nil
-            method_identifier = expr.identifier
-          end
-
-          consume_symbol("(")
-
-          args = [] of ASTNode::Expression
-          if !test_next(Token::Type::Symbol, ")")
-            loop do
-              args << parse_expression_until([",", ")"])
-              break if test_next(Token::Type::Symbol, ")")
-              consume_symbol(",")
-            end
-          end
-
-          consume_symbol(")")
-
-          expr = ASTNode::MethodCall.new(
-            scope_identifier: scope_identifier,
-            method_identifier: method_identifier,
-            args: args
-          )
-        end
-      end
+      expr = parse_identifier_expression(t.value)
     end
 
     raise "invalid token: #{t}" if expr.nil?
@@ -309,6 +286,63 @@ class Parser
     end
 
     raise "invalid token #{peek}"
+  end
+
+  def parse_identifier_expression(identifier : String) : ASTNode::Expression
+    case identifier
+    when "true"
+      return ASTNode::BooleanConstant.new(value: true)
+    when "false"
+      return ASTNode::BooleanConstant.new(value: false)
+    when "null"
+      return ASTNode::NullConstant.new
+    end
+
+    if peek.type != Token::Type::Symbol
+      return ASTNode::Reference.new(identifier: identifier)
+    end
+
+    case peek.value
+    when "["
+      consume
+      offset_expr = parse_expression_until(["]"])
+      consume_symbol("]")
+
+      ASTNode::ArrayAccess.new(
+        varname: identifier,
+        offset_expression: offset_expr,
+      )
+    when ".", "("
+      if peek.value == "."
+        consume
+        scope_identifier = identifier
+        method_identifier = consume_any_identifier
+      else
+        scope_identifier = nil
+        method_identifier = identifier
+      end
+
+      consume_symbol("(")
+
+      args = [] of ASTNode::Expression
+      if !test_next(Token::Type::Symbol, ")")
+        loop do
+          args << parse_expression_until([",", ")"])
+          break if test_next(Token::Type::Symbol, ")")
+          consume_symbol(",")
+        end
+      end
+
+      consume_symbol(")")
+
+      ASTNode::MethodCall.new(
+        scope_identifier: scope_identifier,
+        method_identifier: method_identifier,
+        args: args
+      )
+    else
+      ASTNode::Reference.new(identifier: identifier)
+    end
   end
 
   def consume : Token

@@ -20,3 +20,6 @@ loop:
 
 oop:
 	crystal cmd/codegen/main.cr examples/oop
+
+array:
+	crystal cmd/codegen/main.cr examples/array

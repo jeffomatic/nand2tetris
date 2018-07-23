@@ -91,7 +91,7 @@ module Codegen
       ]
     end
 
-    # Constructors and instance methods should set up the "this" segment
+    # Constructors and instance methods should set up the THIS segment
     if subroutine.variant == ASTNode::Subroutine::Variant::Constructor ||
        subroutine.variant == ASTNode::Subroutine::Variant::InstanceMethod
       commands += [
@@ -135,8 +135,29 @@ module Codegen
     sv : ASTNode::Subroutine::Variant,
     statement : ASTNode::Assignment
   ) : Array(String)
-    commands = codegen_expression(klass, st, sv, statement.expression)
-    commands << st.resolve(statement.assignee).pop_command
+    # Push evaluated RHS value onto stack
+    commands = codegen_expression(klass, st, sv, statement.value_expression)
+
+    # Assignee can be a plain variable or an array expression
+    oe = statement.offset_expression
+    if !oe.nil?
+      # Push the base address
+      commands << st.resolve(statement.assignee).push_command
+
+      # Push the offset
+      commands += codegen_expression(klass, st, sv, oe)
+
+      # Add the offset to the base address and initialize the THAT segment
+      commands += [
+        "add",           # add offset to base address
+        "pop pointer 1", # initialize THAT segment
+        "pop that 0",    # write RHS value to target
+      ]
+    else
+      # Pop the RHS value to the target variable
+      commands << st.resolve(statement.assignee).pop_command
+    end
+
     commands
   end
 
@@ -252,6 +273,8 @@ module Codegen
       commands += codegen_binary_operation(klass, st, sv, expr)
     when ASTNode::UnaryOperation
       commands += codegen_unary_operation(klass, st, sv, expr)
+    when ASTNode::ArrayAccess
+      commands += codegen_array_access(klass, st, sv, expr)
     when ASTNode::MethodCall
       commands += codegen_method_call(klass, st, sv, expr)
     else
@@ -338,6 +361,30 @@ module Codegen
     end
 
     commands
+  end
+
+  def self.codegen_array_access(
+    klass : ASTNode::Class,
+    st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
+    array_access : ASTNode::ArrayAccess
+  ) : Array(String)
+    # Push base address
+    commands = [st.resolve(array_access.varname).push_command]
+
+    # Push offset onto stack
+    commands += codegen_expression(
+      klass,
+      st,
+      sv,
+      array_access.offset_expression
+    )
+
+    commands += [
+      "add",           # add offset to base address
+      "pop pointer 1", # initialize THAT segment
+      "push that 0",   # push value onto stack
+    ]
   end
 
   def self.codegen_method_call(
