@@ -411,12 +411,14 @@ module Codegen
       method_prefix = klass.name
 
       if klass.has_instance_method?(method_call.method_identifier)
-        unless sv == ASTNode::Subroutine::Variant::InstanceMethod
+        case sv
+        when ASTNode::Subroutine::Variant::Constructor,
+             ASTNode::Subroutine::Variant::InstanceMethod
+          commands << st.resolve("this").push_command
+          arg_count += 1
+        else
           raise "instance method call outside of instance method: #{method_call}"
         end
-
-        commands << "push argument 0"
-        arg_count += 1
       end
     elsif st.includes?(scope_identifier)
       st_entry = st.resolve(scope_identifier)

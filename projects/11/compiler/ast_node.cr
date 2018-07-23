@@ -35,6 +35,10 @@ module ASTNode
     def to_json(json : JSON::Builder)
       to_h.to_json(json)
     end
+
+    def to_s(io : IO)
+      io << to_json
+    end
   end
 end
 

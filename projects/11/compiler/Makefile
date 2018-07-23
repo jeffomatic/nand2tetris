@@ -23,3 +23,21 @@ oop:
 
 array:
 	crystal cmd/codegen/main.cr examples/array
+
+Average:
+	crystal cmd/codegen/main.cr ../Average
+
+ComplexArrays:
+	crystal cmd/codegen/main.cr ../ComplexArrays
+
+ConvertToBin:
+	crystal cmd/codegen/main.cr ../ConvertToBin
+
+Pong:
+	crystal cmd/codegen/main.cr ../Pong
+
+Seven:
+	crystal cmd/codegen/main.cr ../Seven
+
+Square:
+	crystal cmd/codegen/main.cr ../Square
