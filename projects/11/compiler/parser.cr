@@ -261,11 +261,11 @@ class Parser
         if t.type == Token::Type::Symbol && [".", "("].includes?(t.value)
           if t.value == "."
             consume
-            klass = expr.identifier
-            method = consume_any_identifier
+            scope_identifier = expr.identifier
+            method_identifier = consume_any_identifier
           else
-            klass = nil
-            method = expr.identifier
+            scope_identifier = nil
+            method_identifier = expr.identifier
           end
 
           consume_symbol("(")
@@ -282,8 +282,8 @@ class Parser
           consume_symbol(")")
 
           expr = ASTNode::MethodCall.new(
-            klass: klass,
-            method: method,
+            scope_identifier: scope_identifier,
+            method_identifier: method_identifier,
             args: args
           )
         end

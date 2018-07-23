@@ -44,10 +44,28 @@ class ASTNode::Class < ASTNode::Base
     members : Array(VarDecl),
     subroutines : Array(Subroutine)
   )
+
+  def count_instance_vars
+    members.reduce(0) do |memo, m|
+      next memo unless m.var_scope == Compiler::VarScope::Field
+      memo += m.names.size
+    end
+  end
+
+  def has_instance_method?(identifier : String) : Bool
+    subroutines.any? do |sub|
+      sub.name == identifier &&
+        sub.variant == ASTNode::Subroutine::Variant::InstanceMethod
+    end
+  end
 end
 
 class ASTNode::VarDecl < ASTNode::Base
-  node_props var_scope : Compiler::VarScope, type : String, names : Array(String)
+  node_props(
+    var_scope : Compiler::VarScope,
+    type : String,
+    names : Array(String)
+  )
 end
 
 class ASTNode::Subroutine < ASTNode::Base
@@ -143,8 +161,8 @@ end
 
 class ASTNode::MethodCall < ASTNode::Expression
   node_props(
-    klass : String?,
-    method : String,
+    scope_identifier : String?,
+    method_identifier : String,
     args : Array(ASTNode::Expression)
   )
 end

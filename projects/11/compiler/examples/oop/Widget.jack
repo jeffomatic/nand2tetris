@@ -1,0 +1,86 @@
+class Widget {
+  static int numWidgets;
+  field string name;
+  field Widget friend;
+
+  constructor Widget new(string n) {
+    let name = n;
+    let numWidgets = numWidgets + 1;
+    return this;
+  }
+
+  function int getNumWidgets() {
+    return numWidgets;
+  }
+
+  method void befriend(Widget w) {
+    var Widget f;
+
+    if (w = this) {
+      do Output.printString(getName());
+      do Output.printString(" can't be their own friend.");
+      do Output.println();
+      return;
+    }
+
+    if ((w.getFriend() = this) & (getFriend() = w)) {
+      do Output.printString(getName());
+      do Output.printString(" and ");
+      do Output.printString(w.getName());
+      do Output.printString(" are already friends.");
+      do Output.println();
+      return;
+    }
+
+    if (~(w.getFriend() = null)) {
+      do Output.printString(w.getName());
+      do Output.printString(" already has a friend: ");
+      let f = w.getFriend();
+      do Output.printString(f.getName());
+      do Output.println();
+      return;
+    }
+
+    do setFriend(w);
+    do w.setFriend(this);
+
+    do Output.printString(name);
+    do Output.printString(" and ");
+    do Output.printString(w.getName());
+    do Output.printString(" are now friends.");
+    do Output.println();
+
+    return;
+  }
+
+  method void setFriend(Widget w) {
+    let friend = w;
+    return;
+  }
+
+  method Widget getFriend() {
+    return friend;
+  }
+
+  method string getName() {
+    return name;
+  }
+
+  method void sayHi() {
+    do Output.printString("Hi, I'm ");
+    do Output.printString(getName());
+    do Output.printString(". ");
+
+    if (friend = null) {
+      do Output.printString(" I don't have a friend yet.");
+    } else {
+      do Output.printString(" My friend is ");
+      do Output.printString(friend.getName());
+      do Output.printString(".");
+    }
+
+    do Output.println();
+
+    return;
+  }
+}

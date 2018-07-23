@@ -17,3 +17,6 @@ conditional:
 
 loop:
 	crystal cmd/codegen/main.cr examples/loop
+
+oop:
+	crystal cmd/codegen/main.cr examples/oop

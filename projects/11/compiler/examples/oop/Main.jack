@@ -1,0 +1,35 @@
+class Main {
+  function void main() {
+    var Widget w1, w2, w3;
+    let w1 = Widget.new("Alice");
+    let w2 = Widget.new("Bob");
+    let w3 = Widget.new("Carol");
+
+    do Output.printString("There are ");
+    do Output.printInt(Widget.getNumWidgets());
+    do Output.printString(" widgets.");
+    do Output.println();
+
+    do w1.sayHi();
+    do w2.sayHi();
+    do w3.sayHi();
+
+    do w1.befriend(w1);
+    do w1.befriend(w2);
+    do w1.befriend(w2);
+    do w2.befriend(w1);
+    do w3.befriend(w1);
+    do w1.befriend(w3);
+
+    do w1.sayHi();
+    do w2.sayHi();
+    do w3.sayHi();
+
+    do Output.printString("There are ");
+    do Output.printInt(Widget.getNumWidgets());
+    do Output.printString(" widgets.");
+    do Output.println();
+
+    return;
+  }
+}

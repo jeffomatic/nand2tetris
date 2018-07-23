@@ -67,6 +67,14 @@ class SymbolTable
     raise "undeclared variable: #{identifier}"
   end
 
+  def includes?(identifier)
+    @entries_by_var_scope.each do |var_scope, entries|
+      return true if entries.has_key?(identifier)
+    end
+
+    false
+  end
+
   def clear(var_scope : Compiler::VarScope) : Void
     @entries_by_var_scope[var_scope] = {} of String => Entry
   end

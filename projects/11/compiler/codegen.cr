@@ -35,6 +35,28 @@ module Codegen
     st : SymbolTable,
     subroutine : ASTNode::Subroutine
   ) : Array(String)
+    num_locals = 0
+
+    # Constructors and instance methods must define a "this" parameter, either
+    # created as a local or provided by the caller.
+    case subroutine.variant
+    when ASTNode::Subroutine::Variant::Constructor
+      st.declare(
+        var_scope: Compiler::VarScope::Local,
+        type: klass.name,
+        identifier: "this"
+      )
+      num_locals += 1
+    when ASTNode::Subroutine::Variant::InstanceMethod
+      st.declare(
+        var_scope: Compiler::VarScope::Argument,
+        type: klass.name,
+        identifier: "this"
+      )
+    else
+      # only instance methods and constructors need "this"
+    end
+
     subroutine.parameters.each do |param|
       st.declare(
         var_scope: Compiler::VarScope::Argument,
@@ -53,16 +75,33 @@ module Codegen
       end
     end
 
-    num_locals = subroutine.locals.reduce(0) do |memo, decl|
+    num_locals += subroutine.locals.reduce(0) do |memo, decl|
       memo += decl.names.size
     end
 
-    commands = [
-      "function #{klass.name}.#{subroutine.name} #{num_locals}",
-    ]
+    commands = ["function #{klass.name}.#{subroutine.name} #{num_locals}"]
 
-    subroutine.body.each do |s|
-      commands += codegen_statement(klass, st, s)
+    # Constructors need to allocate memory for the instance, and then set the
+    # proper value of the "this" variable
+    if subroutine.variant == ASTNode::Subroutine::Variant::Constructor
+      commands += [
+        "push constant #{klass.count_instance_vars}",
+        "call Memory.alloc 1",
+        st.resolve("this").pop_command,
+      ]
+    end
+
+    # Constructors and instance methods should set up the "this" segment
+    if subroutine.variant == ASTNode::Subroutine::Variant::Constructor ||
+       subroutine.variant == ASTNode::Subroutine::Variant::InstanceMethod
+      commands += [
+        st.resolve("this").push_command,
+        "pop pointer 0",
+      ]
+    end
+
+    subroutine.body.each do |statement|
+      commands += codegen_statement(klass, st, subroutine.variant, statement)
     end
 
     commands
@@ -71,19 +110,20 @@ module Codegen
   def self.codegen_statement(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     statement : ASTNode::Statement
   ) : Array(String)
     case statement
     when ASTNode::Assignment
-      codegen_assignment(klass, st, statement)
+      codegen_assignment(klass, st, sv, statement)
     when ASTNode::Conditional
-      codegen_conditional(klass, st, statement)
+      codegen_conditional(klass, st, sv, statement)
     when ASTNode::Loop
-      codegen_loop(klass, st, statement)
+      codegen_loop(klass, st, sv, statement)
     when ASTNode::Do
-      codegen_do(klass, st, statement)
+      codegen_do(klass, st, sv, statement)
     when ASTNode::Return
-      codegen_return(klass, st, statement)
+      codegen_return(klass, st, sv, statement)
     else
       raise NotImplementedError.new("statement codegen for #{statement.class.name}")
     end
@@ -92,9 +132,10 @@ module Codegen
   def self.codegen_assignment(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     statement : ASTNode::Assignment
   ) : Array(String)
-    commands = codegen_expression(klass, st, statement.expression)
+    commands = codegen_expression(klass, st, sv, statement.expression)
     commands << st.resolve(statement.assignee).pop_command
     commands
   end
@@ -104,16 +145,17 @@ module Codegen
   def self.codegen_conditional(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     statement : ASTNode::Conditional
   ) : Array(String)
     conditional_prefix = "label#{@@next_conditional_index}"
     @@next_conditional_index += 1
 
-    commands = codegen_expression(klass, st, statement.condition)
+    commands = codegen_expression(klass, st, sv, statement.condition)
     commands << "if-goto #{conditional_prefix}_if_true"
 
     statement.alternative.each do |s|
-      commands += codegen_statement(klass, st, s)
+      commands += codegen_statement(klass, st, sv, s)
     end
 
     commands += [
@@ -122,7 +164,7 @@ module Codegen
     ]
 
     statement.consequence.each do |s|
-      commands += codegen_statement(klass, st, s)
+      commands += codegen_statement(klass, st, sv, s)
     end
 
     commands << "label #{conditional_prefix}_if_end"
@@ -134,20 +176,21 @@ module Codegen
   def self.codegen_loop(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     statement : ASTNode::Loop
   ) : Array(String)
     label_prefix = "label#{@@next_loop_index}"
     @@next_loop_index += 1
 
     commands = ["label #{label_prefix}_start"]
-    commands += codegen_expression(klass, st, statement.condition)
+    commands += codegen_expression(klass, st, sv, statement.condition)
     commands += [
       "not",
       "if-goto #{label_prefix}_end",
     ]
 
     statement.body.each do |s|
-      commands += codegen_statement(klass, st, s)
+      commands += codegen_statement(klass, st, sv, s)
     end
 
     commands += [
@@ -161,21 +204,23 @@ module Codegen
   def self.codegen_do(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     statement : ASTNode::Do
   ) : Array(String)
-    commands = codegen_method_call(klass, st, statement.method_call)
+    commands = codegen_method_call(klass, st, sv, statement.method_call)
   end
 
   def self.codegen_return(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     statement : ASTNode::Return
   ) : Array(String)
     commands = [] of String
 
     expr = statement.expression
     if !expr.nil?
-      commands += codegen_expression(klass, st, expr)
+      commands += codegen_expression(klass, st, sv, expr)
     else
       commands << "push constant 0"
     end
@@ -187,6 +232,7 @@ module Codegen
   def self.codegen_expression(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     expr : ASTNode::Expression
   ) : Array(String)
     commands = [] of String
@@ -201,13 +247,13 @@ module Codegen
     when ASTNode::NullConstant
       commands += codegen_null_constant
     when ASTNode::Reference
-      commands += codegen_reference(klass, st, expr)
+      commands += codegen_reference(klass, st, sv, expr)
     when ASTNode::BinaryOperation
-      commands += codegen_binary_operation(klass, st, expr)
+      commands += codegen_binary_operation(klass, st, sv, expr)
     when ASTNode::UnaryOperation
-      commands += codegen_unary_operation(klass, st, expr)
+      commands += codegen_unary_operation(klass, st, sv, expr)
     when ASTNode::MethodCall
-      commands += codegen_method_call(klass, st, expr)
+      commands += codegen_method_call(klass, st, sv, expr)
     else
       raise NotImplementedError.new("expression not implemented: #{expr.class.name}")
     end
@@ -246,6 +292,7 @@ module Codegen
   def self.codegen_reference(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     expr : ASTNode::Reference
   ) : Array(String)
     [st.resolve(expr.identifier).push_command]
@@ -254,10 +301,11 @@ module Codegen
   def self.codegen_binary_operation(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     expr : ASTNode::BinaryOperation
   ) : Array(String)
-    commands = codegen_expression(klass, st, expr.left_operand)
-    commands += codegen_expression(klass, st, expr.right_operand)
+    commands = codegen_expression(klass, st, sv, expr.left_operand)
+    commands += codegen_expression(klass, st, sv, expr.right_operand)
 
     case expr.operator
     when "+" then commands << "add"
@@ -278,9 +326,10 @@ module Codegen
   def self.codegen_unary_operation(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     expr : ASTNode::UnaryOperation
   ) : Array(String)
-    commands = codegen_expression(klass, st, expr.operand)
+    commands = codegen_expression(klass, st, sv, expr.operand)
 
     case expr.operator
     when "-" then commands << "neg"
@@ -294,20 +343,51 @@ module Codegen
   def self.codegen_method_call(
     klass : ASTNode::Class,
     st : SymbolTable,
+    sv : ASTNode::Subroutine::Variant,
     method_call : ASTNode::MethodCall
   ) : Array(String)
     commands = [] of String
+    arg_count = 0
+    scope_identifier = method_call.scope_identifier
 
-    method_call.args.each do |e|
-      commands += codegen_expression(klass, st, e)
-    end
+    # - If the scope identifier is nil, then this is a call to either an
+    #   instance or static method of the curent class. In the case of an
+    #   instance method, the first argument in the current stack frame is the
+    #   "this" pointer, and we should push its value as the first argument to
+    #   the next frame.
+    # - If the scope identifier is not nil and matches a value on the symbol
+    #   table, this is an instance method call. The scope identifier identifies
+    #   the instance.
+    # - Otherwise, we can assume the scope identifier is the name of another
+    #   class.
+    if scope_identifier.nil?
+      method_prefix = klass.name
 
-    if !method_call.klass.nil?
-      commands << "call #{method_call.klass}.#{method_call.method} #{method_call.args.size}"
+      if klass.has_instance_method?(method_call.method_identifier)
+        unless sv == ASTNode::Subroutine::Variant::InstanceMethod
+          raise "instance method call outside of instance method: #{method_call}"
+        end
+
+        commands << "push argument 0"
+        arg_count += 1
+      end
+    elsif st.includes?(scope_identifier)
+      st_entry = st.resolve(scope_identifier)
+      method_prefix = st_entry.type
+
+      commands << st_entry.push_command
+      arg_count += 1
     else
-      commands << "call #{klass.name}.#{method_call.method} #{method_call.args.size}"
+      method_prefix = scope_identifier
     end
 
+    # Push the remaining arguments onto stack
+    method_call.args.each do |e|
+      commands += codegen_expression(klass, st, sv, e)
+      arg_count += 1
+    end
+
+    commands << "call #{method_prefix}.#{method_call.method_identifier} #{arg_count}"
     commands
   end
 end
