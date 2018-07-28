@@ -7,28 +7,166 @@
  * This library provides two services: direct access to the computer's main
  * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
  * consists of 32,768 words, each holding a 16-bit binary number.
- */ 
+ */
 class Memory {
+
+    static Array mem;
+    static int heapStart, heapEnd, freeListHead;
+    static int headerSize, _size, _prev, _next;
 
     /** Initializes the class. */
     function void init() {
+        var Array freeNode;
+
+        let heapStart = 2048;
+        let heapEnd = 16384;
+        let freeListHead = heapStart;
+
+        let headerSize = 3;
+        let _size = 0;
+        let _prev = 1;
+        let _next = 2;
+
+        let heapStart[_size] = heapEnd - heapStart;
+        let heapStart[_prev] = -1;
+        let heapStart[_next] = -1;
+
+        return;
     }
 
     /** Returns the RAM value at the given address. */
     function int peek(int address) {
+        return mem[address];
     }
 
     /** Sets the RAM value at the given address to the given value. */
     function void poke(int address, int value) {
+        let mem[address] = value;
+        return;
     }
 
     /** Finds an available RAM block of the given size and returns
      *  a reference to its base address. */
     function int alloc(int size) {
+        var int node, best;
+
+        // Each allocation has a tax of one word, which stores the allocation
+        // size. On top of that, the allocation must deallocate into a valid
+        // free node, so the free node header size is the minimum allocation
+        // size.
+        let size = Math.max(size + 1, headerSize);
+
+        // Search for the best-fitting node. We're just gonna iterate over the
+        // entire free list, unless we get a perfect match.
+        let node = freeListHead;
+        let best = -1;
+        while (node > -1) {
+            if (node[_size] = size) {
+                return Memory.allocFreeNode(node, size);
+            }
+
+            if (size < node[_size]) {
+                if (best = -1) {
+                    let best = node;
+                } else {
+                    if (node[_size] < best[_size]) {
+                        let best = node;
+                    }
+                }
+            }
+
+            let node = node[_next];
+        }
+
+        if (best = -1) {
+            return -1;
+        }
+
+        return Memory.allocFreeNode(best, size);
+    }
+
+    function int allocFreeNode(int node, int size) {
+        var int newNode, t;
+
+        // We should split if there's enough leftover to create a new
+        // minimum-sized free node.
+        if (
+            (node[_size] > (size + headerSize)) |
+            (node[_size] = (size + headerSize))
+        ) {
+            // Split off the remainder of the current node
+            let newNode = node + size;
+
+            let newNode[_size] = node[_size] - size;
+
+            let t = node[_prev];
+            let newNode[_prev] = t;
+            if (t = -1) {
+                let freeListHead = newNode;
+            } else {
+                let t[_next] = newNode;
+            }
+
+            let t = node[_next];
+            let newNode[_next] = t;
+            if (t > -1) {
+                let t[_prev] = newNode;
+            }
+
+            // Prep the new allocation
+            return Memory.prepAllocation(node, size);
+        }
+
+        // We didn't split because the node is too small. We'll just treat the
+        // whole thing as a chunk.
+
+        let t = node[_prev];
+        if (t = -1) {
+            let freeListHead = node[_next];
+        } else {
+            let t[_next] = node[_next];
+        }
+
+        let t = node[_next];
+        if (t > -1) {
+            let t[_prev] = node[_prev];
+        }
+
+        return Memory.prepAllocation(node, node[_size]);
+    }
+
+    function int prepAllocation(int allocation, int size) {
+        var int i;
+
+        // Write allocation size as first word
+        let allocation[0] = size;
+
+        // Clear the allocation to zero
+        let i = 1;
+        while (i < size) {
+            let allocation[i] = 0;
+            let i = i + 1;
+        }
+
+        // Return pointer to usable memory
+        return allocation + 1;
     }
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
-    }    
+        var int node;
+        let node = o - 1;
+
+        let node[_prev] = -1;
+        let node[_next] = freeListHead;
+
+        if (freeListHead > -1) {
+            let freeListHead[_prev] = node;
+        }
+
+        let freeListHead = node;
+
+        return;
+    }
 }
